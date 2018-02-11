@@ -56,11 +56,11 @@ public class EventListener implements Listener {
 				plugin.savePointsFile(e.getPlayer().getUniqueId()); // Save the file
 			}
 		} 
-		
+
 		// Update the tier
 		if(e.getNewLevel() > e.getOldLevel()) TierUtils.increaseTierOnLevel(plugin, e.getPlayer());
 		else if (e.getNewLevel() < e.getOldLevel()) TierUtils.decreaseTierOnLevel(plugin, e.getPlayer());
-		
+
 		if(plugin.saveLevel) {
 			e.getPlayer().setLevel(plugin.playerSkills.get(e.getPlayer().getUniqueId()).lastLevel); // Set the player's level to their last level
 		}
@@ -83,10 +83,17 @@ public class EventListener implements Listener {
 		// Check if the damager is a player
 		if(e.getDamager() instanceof Player) { 
 
-			// Get the damage amount from the game's default damage and add the skill's damage on it and take away the defense from the enemy
-			double damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg() -
-					plugin.playerSkills.get(e.getEntity().getUniqueId()).getDefense();
+			double damage = 2.5; // Default damage
 
+			// Get the damage amount from the game's default damage and add the skill's damage on it and take away the defense from the enemy
+			if(e.getEntity() instanceof Player) {
+				damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg() -
+						plugin.playerSkills.get(e.getEntity().getUniqueId()).getDefense();
+			}
+			else {
+				damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg();
+			}
+			
 			// Make sure damage doesn't go to zero or less than zero
 			if(damage <= 0) damage = 2.5;
 
@@ -100,10 +107,11 @@ public class EventListener implements Listener {
 				e.setDamage(damage * 2); // Multiply the attack damage by two
 			}
 
+			e.getDamager().sendMessage(ChatColor.RED + "Damage dealt is " + ChatColor.BLUE + damage);
 			e.setDamage(damage); // Set the default damage to our damage variable
 		}
 	}
-	
+
 	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void onEnchant(EnchantItemEvent e) {

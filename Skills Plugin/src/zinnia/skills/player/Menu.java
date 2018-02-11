@@ -241,6 +241,6 @@ public class Menu implements Listener {
 					e.setCancelled(true);
 				}
 			}
-		}catch (Exception ex) { e.setCancelled(true); e.getWhoClicked().closeInventory(); }
+		}catch (Exception ex) { }
 	}
 }

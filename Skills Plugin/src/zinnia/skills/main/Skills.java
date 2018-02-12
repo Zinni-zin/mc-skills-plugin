@@ -6,11 +6,14 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.DyeColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.material.Wool;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -153,7 +156,6 @@ public class Skills extends JavaPlugin {
 	 * Variables to hold the max amount skill points can go into a skill
 	 */
 	public static int maxHpPoints = 500; // Max amount of points required to get to max hp
-	//public static int maxHpRegenPoints = 500; // Max amount of points required to get max hp regen
 	public static int maxDmgPoints = 500; // Max amount of points required to get max damage 
 	public static int maxDefensePoints = 500; // Max amount of points required to get max defense
 
@@ -168,7 +170,6 @@ public class Skills extends JavaPlugin {
 	 * Variables to hold the max buff from skills
 	 */
 	public static int maxHp = 10000; // Max hp through skills
-	//public static int maxHpRegen = 400; // Max hp regen through skills
 	public static int maxDmg = 400; // Max amount of damage through skills 
 	public static int maxDefense = 400; // Max amount of defense through skills
 
@@ -178,6 +179,96 @@ public class Skills extends JavaPlugin {
 	public static int maxMana = 2000; // Max amount of mana through skills
 	public static int maxManaRegen = 250; // Max amount of mana regen through skills
 
+	/*
+	 * Variables for menu position
+	 */
+	public static int menuSize = 45;
+	public static int hpPosition = 20;
+	public static int defensePosition = 22;
+	public static int dmgPosition = 24;
+	public static int dodgePosition = 12;
+	public static int critPosition = 14;
+	public static int manaPosition = 30;
+	public static int manaRegenPosition = 32;
+	
+	/*
+	 * Variables for menu items
+	 */
+	public static ItemStack hpItem = new Wool(DyeColor.RED).toItemStack(1);
+	public static ItemStack defenseItem = new Wool(DyeColor.GRAY).toItemStack(1);
+	public static ItemStack damageItem = new Wool(DyeColor.YELLOW).toItemStack(1);
+	public static ItemStack dodgeItem = new Wool(DyeColor.LIGHT_BLUE).toItemStack(1);
+	public static ItemStack critItem = new Wool(DyeColor.GREEN).toItemStack(1);
+	public static ItemStack manaItem = new Wool(DyeColor.BLUE).toItemStack(1);
+	public static ItemStack manaRegenItem = new Wool(DyeColor.PINK).toItemStack(1);
+	
+	/*
+	 * Variables to hold mob's damage
+	 */
+	public static double zombieDamage              = 6;
+	public static double zombieVillagerDamage      = 6.5;
+	public static double giantDamage               = 10;
+	public static double skeletonDamage            = 5.5;
+	public static double spiderDamage              = 5.5;
+	public static double caveSpiderDamage          = 5;
+	public static double endermanDamage            = 4;
+	public static double wolfDamage                = 3.5;
+	public static double blazeDamage               = 4.5;
+	public static double slimeDamage               = 4;
+	public static double magmaCubeDamage           = 4.5;
+	public static double silverFishDamage          = 5;
+	public static double witherSkeletonDamage      = 4.5;
+	public static double guardianDamage            = 3.5;
+	public static double elderGuardianDamage       = 4.5;
+	public static double polarBearDamage           = 6;
+	public static double vexDamage                 = 6;
+	
+	/*
+	 * Variables to hold mob's defense
+	 */
+	public static double ocelotDefense             = 2.5;
+	public static double horseDefense              = 7;
+	public static double rabbitDefense             = 2;
+	public static double sheepDefense              = 3;
+	public static double pigDefense                = 3;
+	public static double chickenDefense            = 1;
+	public static double cowDefense                = 4;
+	public static double mooshroomDefense          = 4;
+	public static double squidDefense              = 3.5;
+	public static double batDefense                = 2;
+	public static double villagerDefense           = 5;
+	public static double zombieDefense             = 6;
+	public static double zombieVillagerDefense     = 6.5;
+	public static double giantDefense              = 10;
+	public static double zombiePigmanDefense       = 6;
+	public static double skeletonDefense           = 5.5;
+	public static double spiderDefense             = 5.5;
+	public static double caveSpiderDefense         = 5;
+	public static double creeperDefense            = 2;
+	public static double endermanDefense           = 4;
+	public static double wolfDefense               = 3.5;
+	public static double witchDefense              = 2;
+	public static double blazeDefense              = 4.5;
+	public static double slimeDefense              = 4;
+	public static double magmaCubeDefense          = 4.5;
+	public static double silverFishDefense         = 5;
+	public static double witherSkeletonDefense     = 4.5;
+	public static double witherDefense             = 20;
+	public static double enderDragonDefense        = 20;
+	public static double guardianDefense           = 3.5;
+	// What I think is above 1.8 not too sure though tbh...
+	public static double elderGuardianDefense      = 4.5;
+	public static double polarBearDefense          = 6;
+	public static double shulkerDefense 	       = 6;
+	public static double llamaDefense              = 5;
+	public static double endermiteDefense          = 4;
+	public static double parrotDefense             = 2;
+	public static double vexDefense                = 6;
+	public static double strayDefense              = 6;
+	public static double evokerDefense             = 4;
+	public static double vindicatorDefense         = 4;
+	public static double illusionerDefense         = 4;
+	
 	/*
 	 * Important!
 	 * ON ENABLE METHOD(Initialization)!
@@ -195,8 +286,8 @@ public class Skills extends JavaPlugin {
 		menu = new Menu(this); // Initialize the menu
 		sCommand = new SkillsCommand(this, menu); // Initialize the s command
 
-		if (!new File("plugins" + File.separator + "Skills" + File.separator + "config.yml").exists())
-			saveConfigData();
+		// If the config doesn't exist save it
+		if (!new File("plugins" + File.separator + "Skills" + File.separator + "config.yml").exists()) saveConfigData();
 
 		loadConfigData(); // Call the load configuration data method
 	}
@@ -219,7 +310,7 @@ public class Skills extends JavaPlugin {
 
 		if(cmd.getName().equalsIgnoreCase("Skills"))  // Check the command name
 			sCommand.Command(sender, Label, args); // Do the command
-
+		
 		return true;
 	}
 
@@ -352,8 +443,27 @@ public class Skills extends JavaPlugin {
 		maxMana = config.getInt("maxMana");
 		maxManaRegen = config.getInt("maxMana-Regen");
 
+		// Menu Positions
+		menuSize = config.getInt("menu-size");
+		hpPosition = config.getInt("hp-position");
+		dmgPosition = config.getInt("damage-position");
+		defensePosition = config.getInt("defense-position");
+		dodgePosition = config.getInt("dodge-position");
+		critPosition = config.getInt("crit-position");
+		manaPosition = config.getInt("max-mana-position");
+		manaRegenPosition = config.getInt("mana-regen-position");
+		if(menuSize % 9 != 0) { menuSize = 45; System.out.println("Menu Size has to be a multiple of 9!"); }
+		
+		// Menu Items
+		hpItem = config.getItemStack("hp-item");
+		damageItem = config.getItemStack("damage-item");
+		defenseItem = config.getItemStack("defense-item");
+		dodgeItem = config.getItemStack("dodge-item");
+		critItem = config.getItemStack("crit-item");
+		manaItem = config.getItemStack("mana-item");
+		manaRegenItem = config.getItemStack("mana-regen-item");
+		
 		// Scoreboard Data
-
 		scoreboardPacketSendPeriod = config.getInt("Seconds-Each-Scoreboard-Packet-Is-Sent");
 
 		// Load all the data to tell us which scores we're using for the scoreboard
@@ -373,6 +483,73 @@ public class Skills extends JavaPlugin {
 		ScoreboardData._UseScore13 = config.getBoolean("Scoreboard-Slot-13");
 		ScoreboardData._UseScore14 = config.getBoolean("Scoreboard-Slot-14");
 		ScoreboardData._UseScore15 = config.getBoolean("Scoreboard-Slot-15");
+		
+		/*
+		 * Mob Damage
+		 */
+		zombieDamage = config.getDouble("zombie-damage");
+		zombieVillagerDamage = config.getDouble("zombie-villager-damage");
+		giantDamage = config.getDouble("gaint-damage");
+		skeletonDamage = config.getDouble("skeleton-damage");
+		spiderDamage = config.getDouble("spider-damage");
+		caveSpiderDamage = config.getDouble("cave-spider-damage");
+		endermanDamage = config.getDouble("enderman-damage");
+		wolfDamage = config.getDouble("wolf-damage");
+		blazeDamage = config.getDouble("blaze-damage");
+		slimeDamage = config.getDouble("slime-damage");
+		magmaCubeDamage = config.getDouble("magma-cube-damage");
+		silverFishDamage = config.getDouble("silver-fish-damage");
+		witherSkeletonDamage = config.getDouble("wither-skeleton-damage");
+		guardianDamage = config.getDouble("guardian-damage");
+		elderGuardianDamage = config.getDouble("elder-guardian-damage");
+		polarBearDamage = config.getDouble("polar-bear-damage");
+		vexDamage = config.getDouble("vex-damage");
+		
+		/*
+		 * Mob Defense
+		 */
+		ocelotDefense = config.getDouble("ocelot-defense");
+		horseDefense = config.getDouble("horse-defense");
+		rabbitDefense = config.getDouble("rabbit-defense");
+		sheepDefense = config.getDouble("sheep-defense");
+		pigDefense = config.getDouble("pig-defense");
+		chickenDefense = config.getDouble("chicken-defense");
+		cowDefense = config.getDouble("cow-defense");
+		mooshroomDefense = config.getDouble("mooshroom-defense");
+		squidDefense = config.getDouble("squid-defense");
+		batDefense = config.getDouble("bat-defense");
+		villagerDefense = config.getDouble("villager-defense");
+		zombieDefense = config.getDouble("zombie-defense");
+		zombieVillagerDefense = config.getDouble("zombie-villager-defense");
+		giantDefense = config.getDouble("giant-defense");
+		zombiePigmanDefense = config.getDouble("zombie-pigman-defense");
+		skeletonDefense = config.getDouble("skeleton-defense");
+		spiderDefense = config.getDouble("spider-defense");
+		caveSpiderDefense = config.getDouble("cave-spider-defense");
+		creeperDefense = config.getDouble("creeper-defense");
+		endermanDefense = config.getDouble("enderman-defense");
+		wolfDefense = config.getDouble("wolf-defense");
+		witchDefense = config.getDouble("witch-defense");
+		blazeDefense = config.getDouble("blaze-defense");
+		slimeDefense = config.getDouble("slime-defense");
+		magmaCubeDefense = config.getDouble("magma-cube-defense");
+		silverFishDefense = config.getDouble("silver-fish-defense");
+		witherSkeletonDefense = config.getDouble("wither-skeleton-defense");
+		witherDefense = config.getDouble("wither-defense");
+		enderDragonDefense = config.getDouble("ender-dragon-defense");
+		guardianDefense = config.getDouble("guardian-defense");
+		elderGuardianDefense = config.getDouble("elder-guardian-defense");
+		polarBearDefense = config.getDouble("polar-bear-defense");
+		shulkerDefense = config.getDouble("shulker-defense");
+		llamaDefense = config.getDouble("llama-defense");
+		endermiteDefense = config.getDouble("endermite-defense");
+		parrotDefense = config.getDouble("parrot-defense");
+		vexDefense = config.getDouble("vex-defense");
+		strayDefense = config.getDouble("stray-defense");
+		evokerDefense = config.getDouble("evoker-defense");
+		vindicatorDefense = config.getDouble("vindicator-defense");
+		illusionerDefense = config.getDouble("illusioner-defense");
+		
 	}
 
 	// Save the config file
@@ -475,8 +652,27 @@ public class Skills extends JavaPlugin {
 		config.set("maxMana", maxMana);
 		config.set("maxMana-Regen", maxManaRegen);
 
+		
+		// Menu positions
+		config.set("menu-size", menuSize);
+		config.set("hp-position", hpPosition);
+		config.set("damage-position", dmgPosition);
+		config.set("defense-position", defensePosition);
+		config.set("dodge-position", dodgePosition);
+		config.set("crit-position", critPosition);
+		config.set("max-mana-position", manaPosition);
+		config.set("mana-regen-position", manaRegenPosition);
+		
+		// Menu Items
+		config.set("hp-item", hpItem);
+		config.set("damage-item", damageItem);
+		config.set("defense-item", defenseItem);
+		config.set("dodge-item", dodgeItem);
+		config.set("crit-item", critItem);
+		config.set("mana-item", manaItem);
+		config.set("mana-regen-item", manaRegenItem);
+		
 		// Scoreboard data
-
 		config.set("Seconds-Each-Scoreboard-Packet-Is-Sent", scoreboardPacketSendPeriod);
 
 		// Set all the use score data
@@ -497,6 +693,73 @@ public class Skills extends JavaPlugin {
 		config.set("Scoreboard-Slot-14", ScoreboardData._UseScore14);
 		config.set("Scoreboard-Slot-15", ScoreboardData._UseScore15);
 
+		/*
+		 * Mob damage
+		 */
+		config.set("zombie-damage", zombieDamage);
+		config.set("zombie-villager-damage", zombieVillagerDamage);
+		config.set("gaint-damage", giantDamage);
+		config.set("skeleton-damage", skeletonDamage);
+		config.set("spider-damage", spiderDamage);
+		config.set("cave-spider-damage", caveSpiderDamage);
+		config.set("enderman-damage", endermanDamage);
+		config.set("wolf-damage", wolfDamage);
+		config.set("blaze-damage", blazeDamage);
+		config.set("slime-damage", slimeDamage);
+		config.set("magma-cube-damage", magmaCubeDamage);
+		config.set("silver-fish-damage", silverFishDamage);
+		config.set("wither-skeleton-damage", witherSkeletonDamage);
+		config.set("guardian-damage", guardianDamage);
+		config.set("elder-guardian-damage", elderGuardianDamage);
+		config.set("polar-bear-damage", polarBearDamage);
+		config.set("vex-damage", vexDamage);
+		
+		/*
+		 * Mob defense
+		 */
+		
+		config.set("ocelot-defense", ocelotDefense);
+		config.set("horse-defense", horseDefense);
+		config.set("rabbit-defense", rabbitDefense);
+		config.set("sheep-defense", sheepDefense);
+		config.set("pig-defense", pigDefense);
+		config.set("chicken-defense", chickenDefense);
+		config.set("cow-defense", cowDefense);
+		config.set("mooshroom-defense", mooshroomDefense);
+		config.set("squid-defense", squidDefense);
+		config.set("bat-defense", batDefense);
+		config.set("villager-defense", villagerDefense);
+		config.set("zombie-defense", zombieDefense);
+		config.set("zombie-villager-defense", zombieVillagerDefense);
+		config.set("giant-defense", giantDefense);
+		config.set("zombie-pigman-defense", zombiePigmanDefense);
+		config.set("skeleton-defense", skeletonDefense);
+		config.set("spider-defense", spiderDefense);
+		config.set("cave-spider-defense", caveSpiderDefense);
+		config.set("creeper-defense", creeperDefense);
+		config.set("enderman-defense", endermanDefense);
+		config.set("wolf-defense", wolfDefense);
+		config.set("witch-defense", witchDefense);
+		config.set("blaze-defense", blazeDefense);
+		config.set("slime-defense", slimeDefense);
+		config.set("magma-cube-defense", magmaCubeDefense);
+		config.set("silver-fish-defense", silverFishDefense);
+		config.set("wither-skeleton-defense", witherSkeletonDefense);
+		config.set("wither-defense", witherDefense);
+		config.set("ender-dragon-defense", enderDragonDefense);
+		config.set("guardian-defense", guardianDefense);
+		config.set("elder-guardian-defense", elderGuardianDefense);
+		config.set("polar-bear-defense", polarBearDefense);
+		config.set("shulker-defense", shulkerDefense);
+		config.set("llama-defense", llamaDefense);
+		config.set("endermite-defense", endermiteDefense);
+		config.set("parrot-defense", parrotDefense);
+		config.set("vex-defense", vexDefense);
+		config.set("stray-defense", strayDefense);
+		config.set("evoker-defense", evokerDefense);
+		config.set("vindicator-defense", vindicatorDefense);
+		config.set("illusioner-defense", illusionerDefense);
+		
 		saveConfig(); // Save the config
 	}
 

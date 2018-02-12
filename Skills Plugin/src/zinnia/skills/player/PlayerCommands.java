@@ -264,7 +264,8 @@ public class PlayerCommands {
 		else if(args[0].equalsIgnoreCase("reload")) {
 			if(sender.hasPermission("skills.admin")) {
 				plugin.reloadConfig();
-				plugin.saveConfig();
+				plugin.saveConfigData();
+				plugin.loadConfigData();
 				sender.sendMessage(ChatColor.GREEN + "Config reloaded");
 			}
 		}

@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.DyeColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,7 +12,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.material.Wool;
 
 import zinnia.skills.main.Skills;
 import zinnia.skills.utils.Colours;
@@ -33,78 +31,80 @@ public class Menu implements Listener {
 
 	public void OpenInventory(Player player) {
 		// Set the inventory
-		inv = Bukkit.getServer().createInventory(null, 45, 
+		inv = Bukkit.getServer().createInventory(null, Skills.menuSize, 
 				"Skill Points: " + plugin.playerSkills.get(player.getUniqueId()).points);
 
 		setItemStacks(player); // Create the item and it's lore
 
-		inv.setItem(20, hp); // Set the hp placement
-		inv.setItem(22, defense); // Set the defense placement
-		inv.setItem(24, dmg); // Set the damage placement
+		if(Skills.useMaxHpSkill)       inv.setItem(Skills.hpPosition,        hp); // Set the hp placement
+		if(Skills.useDefenseSkill)     inv.setItem(Skills.defensePosition,   defense); // Set the defense placement
+		if(Skills.useDmgSkill)         inv.setItem(Skills.dmgPosition,       dmg); // Set the damage placement
 
-		inv.setItem(12, dodge); // Set the dodge placement
-		inv.setItem(14, crit); // Set the critical placement
+		if(Skills.useDodgeSkill)       inv.setItem(Skills.dodgePosition,     dodge); // Set the dodge placement
+		if(Skills.useCritSkill)        inv.setItem(Skills.critPosition,      crit); // Set the critical placement
 
-		inv.setItem(30, mana); // Set the mana placement 
-		inv.setItem(32, manaRegen); // Set the mana regen placement 
+		if(Skills.useMaxManaSkill)     inv.setItem(Skills.manaPosition,      mana); // Set the mana placement 
+		if(Skills.useManaRegenSkill)   inv.setItem(Skills.manaRegenPosition, manaRegen); // Set the mana regen placement 
 
 		player.openInventory(inv); // Open the inventory
 	}
 
 	// Function to create the item
-	private ItemStack createItem(DyeColor colour, String name, String displayPoints, boolean enabled) {
-		if(enabled) { // If the skill is enabled do the customization
-			ItemStack i = new Wool(colour).toItemStack(1); // Set the item to be wool
-			ItemMeta im = i.getItemMeta(); // Get the item's meta data
-			im.setDisplayName(name); // Set the item's name
-			im.setLore(Arrays.asList(Colours.WHITE + "Raises " + name, displayPoints)); // Set the item's lore
-			i.setItemMeta(im); // Set the item's meta data to the meta data created and altered
-			return i; // return the item we created
-		} else { // Otherwise set everything to make it obvious it's disabled
+	private ItemStack createItem(ItemStack item, String name, String displayPoints/*, boolean enabled*/) {
+		//if(enabled) { // If the skill is enabled do the customization
+		
+		ItemStack i = item; // Set the item
+		ItemMeta im = i.getItemMeta(); // Get the item's meta data
+		im.setDisplayName(name); // Set the item's name
+		im.setLore(Arrays.asList(Colours.WHITE + "Raises " + name, displayPoints)); // Set the item's lore
+		i.setItemMeta(im); // Set the item's meta data to the meta data created and altered
+		return i; // return the item we created
+
+		/*} else { // Otherwise set everything to make it obvious it's disabled
 			ItemStack i = new Wool(DyeColor.BLACK).toItemStack(1); // Set the item to be black wool
 			ItemMeta im = i.getItemMeta(); // Get the item's meta data
 			im.setDisplayName("Disabled"); // Set the display name to disable
 			im.setLore(Arrays.asList(Colours.DARK_GRAY + "This Skill is disabled!")); // Set the lore to say this skill is disabled
 			i.setItemMeta(im); // Set the item meta data to the data we created and altered
 			return i; // Return the item stack
-		}
+		}*/
 	}
 
 	private void setItemStacks(Player player) {
 		// Hp item
-		hp = createItem(DyeColor.RED, ChatColor.RED + "Health", Colours.RED + 
+		hp = createItem(Skills.hpItem, ChatColor.RED + "Health", Colours.RED + 
 				plugin.playerSkills.get(player.getUniqueId()).healthPoints + 
-				Colours.DARK_RED + "/" + Colours.RED + Skills.maxHpPoints, Skills.useMaxHpSkill);
+				Colours.DARK_RED + "/" + Colours.RED + Skills.maxHpPoints/*, Skills.useMaxHpSkill*/);
 
 		// Damage item
-		dmg = createItem(DyeColor.YELLOW, ChatColor.YELLOW + "Damage", Colours.YELLOW +
+		dmg = createItem(Skills.damageItem, ChatColor.YELLOW + "Damage", Colours.YELLOW +
 				plugin.playerSkills.get(player.getUniqueId()).dmgPoints + 
-				Colours.GOLD + "/" + Colours.YELLOW + Skills.maxDmgPoints, Skills.useDmgSkill);
+				Colours.GOLD + "/" + Colours.YELLOW + Skills.maxDmgPoints/*, Skills.useDmgSkill*/);
 
 		// Defense item
-		defense = createItem(DyeColor.GRAY, ChatColor.GRAY + "Defense", Colours.GRAY + 
+		defense = createItem(Skills.defenseItem, ChatColor.GRAY + "Defense", Colours.GRAY + 
 				plugin.playerSkills.get(player.getUniqueId()).defensePoints + 
-				Colours.DARK_GRAY + "/" + Colours.GRAY + Skills.maxDefensePoints, Skills.useDefenseSkill);
+				Colours.DARK_GRAY + "/" + Colours.GRAY + Skills.maxDefensePoints/*, Skills.useDefenseSkill*/);
 
 		// Dodge item
-		dodge = createItem(DyeColor.LIGHT_BLUE, ChatColor.AQUA + "Dodge Chance", 
+		dodge = createItem(Skills.dodgeItem, ChatColor.AQUA + "Dodge Chance", 
 				Colours.AQUA + plugin.playerSkills.get(player.getUniqueId()).dodgePoints + 
-				Colours.DARK_AQUA + "/" + Colours.AQUA + Skills.maxDodgePoints, Skills.useDodgeSkill);
+				Colours.DARK_AQUA + "/" + Colours.AQUA + Skills.maxDodgePoints/*, Skills.useDodgeSkill*/);
 
 		// Crit item
-		crit = createItem(DyeColor.GREEN, ChatColor.DARK_GREEN + "Crit Chance", 
+		crit = createItem(Skills.critItem, ChatColor.DARK_GREEN + "Crit Chance", 
 				Colours.DARK_GREEN + plugin.playerSkills.get(player.getUniqueId()).critPoints + 
-				Colours.GREEN + "/" + Colours.DARK_GREEN + Skills.maxCritPoints, Skills.useCritSkill);
+				Colours.GREEN + "/" + Colours.DARK_GREEN + Skills.maxCritPoints/*, Skills.useCritSkill*/);
 
 		// Mana item
-		mana = createItem(DyeColor.BLUE, Colours.INDIGO + "Mana",
+		mana = createItem(Skills.manaItem, Colours.INDIGO + "Mana",
 				Colours.INDIGO + plugin.playerSkills.get(player.getUniqueId()).manaPoints +
-				Colours.DARK_BLUE + "/" + Colours.INDIGO + Skills.maxManaPoints, Skills.useMaxManaSkill);
+				Colours.DARK_BLUE + "/" + Colours.INDIGO + Skills.maxManaPoints/*, Skills.useMaxManaSkill*/);
 
 		// Mana Regen item
-		manaRegen = createItem(DyeColor.PINK, Colours.DARK_PURPLE + "Mana Regen",
+		manaRegen = createItem(Skills.manaRegenItem, Colours.DARK_PURPLE + "Mana Regen",
 				Colours.DARK_PURPLE + plugin.playerSkills.get(player.getUniqueId()).manaRegenPoints +
-				Colours.PINK + "/" + Colours.DARK_PURPLE + Skills.maxManaRegenPoints, Skills.useManaRegenSkill);
+				Colours.PINK + "/" + Colours.DARK_PURPLE + Skills.maxManaRegenPoints/*, Skills.useManaRegenSkill*/);
 	}
 
 
@@ -234,12 +234,14 @@ public class Menu implements Listener {
 					}
 					e.setCancelled(true);
 				}
-				
+
+				/*
 				// Check if the skill they're trying to use is disabled if so send a message informing them that it is disabled
 				if(e.getCurrentItem().getItemMeta().getDisplayName().contains("Disabled")) {
 					player.sendMessage(ChatColor.RED + "That skill is disabled!");
 					e.setCancelled(true);
 				}
+				 */
 			}
 		}catch (Exception ex) { }
 	}

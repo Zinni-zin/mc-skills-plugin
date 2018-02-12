@@ -14,7 +14,8 @@ public class AdminCommands {
 		// Reload the config if the command is being used through console.
 		if(args[0].equalsIgnoreCase("reload")) {
 			plugin.reloadConfig();
-			plugin.saveConfig();
+			plugin.saveConfigData();
+			plugin.loadConfigData();
 			sender.sendMessage(ChatColor.GREEN + "Config reloaded");
 		}
 

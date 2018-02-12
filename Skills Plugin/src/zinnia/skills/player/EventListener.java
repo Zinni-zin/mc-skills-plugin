@@ -3,6 +3,8 @@ package zinnia.skills.player;
 import java.util.UUID;
 
 import org.bukkit.ChatColor;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -58,8 +60,8 @@ public class EventListener implements Listener {
 		} 
 
 		// Update the tier
-		if(e.getNewLevel() > e.getOldLevel()) TierUtils.increaseTierOnLevel(plugin, e.getPlayer());
-		else if (e.getNewLevel() < e.getOldLevel()) TierUtils.decreaseTierOnLevel(plugin, e.getPlayer());
+		if(e.getNewLevel() > e.getOldLevel() && Skills.tiersIncreaseOnLevel) TierUtils.increaseTierOnLevel(plugin, e.getPlayer());
+		else if (e.getNewLevel() < e.getOldLevel() && Skills.tiersIncreaseOnLevel) TierUtils.decreaseTierOnLevel(plugin, e.getPlayer());
 
 		if(plugin.saveLevel) {
 			e.getPlayer().setLevel(plugin.playerSkills.get(e.getPlayer().getUniqueId()).lastLevel); // Set the player's level to their last level
@@ -91,9 +93,9 @@ public class EventListener implements Listener {
 						plugin.playerSkills.get(e.getEntity().getUniqueId()).getDefense();
 			}
 			else {
-				damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg();
+				damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg() - mobDefense(e.getEntity().getType());
 			}
-			
+
 			// Make sure damage doesn't go to zero or less than zero
 			if(damage <= 0) damage = 2.5;
 
@@ -109,6 +111,21 @@ public class EventListener implements Listener {
 
 			e.getDamager().sendMessage(ChatColor.RED + "Damage dealt is " + ChatColor.BLUE + damage);
 			e.setDamage(damage); // Set the default damage to our damage variable
+		}
+		
+		if(e.getDamager() instanceof Monster) {
+			double damage = 2.5;
+			
+			if(e.getEntity() instanceof Player) {
+				damage = e.getDamage() + mobDamage(e.getDamager().getType()) - plugin.playerSkills.get(e.getEntity().getUniqueId()).getDefense();
+			}
+			else {
+				damage = e.getDamage() + mobDamage(e.getDamager().getType()) - mobDefense(e.getEntity().getType());
+			}
+			
+			if(damage <= 0) damage = 2.5;
+			
+			e.setDamage(damage);
 		}
 	}
 
@@ -150,6 +167,81 @@ public class EventListener implements Listener {
 			plugin.playerSkills.get(playerUUID).manaPoints = 0;
 			plugin.playerSkills.get(playerUUID).manaRegenPoints = 0;
 			plugin.loadPointsFile(playerUUID);
+		}
+	}
+
+	// Method to get mob damage
+	private double mobDamage(EntityType entity) {
+		try {
+			if(entity == EntityType.ZOMBIE)            return Skills.zombieDamage;
+			if(entity == EntityType.ZOMBIE_VILLAGER)   return Skills.zombieVillagerDamage;
+			if(entity == EntityType.GIANT)             return Skills.giantDamage;
+			if(entity == EntityType.SKELETON)          return Skills.skeletonDamage;
+			if(entity == EntityType.SPIDER)            return Skills.spiderDamage;
+			if(entity == EntityType.CAVE_SPIDER)       return Skills.caveSpiderDamage;
+			if(entity == EntityType.ENDERMAN)          return Skills.endermanDamage;
+			if(entity == EntityType.WOLF)              return Skills.wolfDamage;
+			if(entity == EntityType.BLAZE)             return Skills.blazeDamage;
+			if(entity == EntityType.SLIME)             return Skills.slimeDamage;
+			if(entity == EntityType.MAGMA_CUBE)        return Skills.magmaCubeDamage;
+			if(entity == EntityType.WITHER_SKELETON)   return Skills.witherSkeletonDamage;
+			if(entity == EntityType.GUARDIAN)          return Skills.guardianDamage;
+			if(entity == EntityType.ELDER_GUARDIAN)    return Skills.elderGuardianDamage;
+			if(entity == EntityType.POLAR_BEAR)        return Skills.polarBearDamage;
+			if(entity == EntityType.VEX)               return Skills.vexDamage;
+			return 0;
+		} catch(Exception e) {
+			return 0;
+		}
+	}
+	
+	// Method to get the defense of different mobs
+	private double mobDefense(EntityType entity) {
+		try {
+			if(entity == EntityType.OCELOT)                                               return Skills.ocelotDefense;
+			if(entity == EntityType.HORSE || entity == EntityType.SKELETON_HORSE)         return Skills.horseDefense;
+			if(entity == EntityType.RABBIT)                                               return Skills.rabbitDefense;
+			if(entity == EntityType.SHEEP)                                                return Skills.sheepDefense;
+			if(entity == EntityType.PIG)                                                  return Skills.pigDefense;
+			if(entity == EntityType.CHICKEN)                                              return Skills.chickenDefense;
+			if(entity == EntityType.COW)                                                  return Skills.cowDefense;
+			if(entity == EntityType.MUSHROOM_COW)                                         return Skills.mooshroomDefense;
+			if(entity == EntityType.SQUID)                                                return Skills.squidDefense;
+			if(entity == EntityType.BAT)                                                  return Skills.batDefense;
+			if(entity == EntityType.VILLAGER)                                             return Skills.villagerDefense;
+			if(entity == EntityType.ZOMBIE)                                               return Skills.zombieDamage;
+			if(entity == EntityType.ZOMBIE_VILLAGER)                                      return Skills.zombieVillagerDamage;
+			if(entity == EntityType.GIANT)                                                return Skills.giantDamage;
+			if(entity == EntityType.PIG_ZOMBIE)                                           return Skills.zombiePigmanDefense;
+			if(entity == EntityType.SKELETON)                                             return Skills.skeletonDamage;
+			if(entity == EntityType.SPIDER)                                               return Skills.spiderDamage;
+			if(entity == EntityType.CAVE_SPIDER)                                          return Skills.caveSpiderDamage;
+			if(entity == EntityType.CREEPER)                                              return Skills.creeperDefense;
+			if(entity == EntityType.ENDERMAN)                                             return Skills.endermanDamage;
+			if(entity == EntityType.WOLF)                                                 return Skills.wolfDamage;
+			if(entity == EntityType.WITCH)                                                return Skills.witherDefense;
+			if(entity == EntityType.BLAZE)                                                return Skills.blazeDamage;
+			if(entity == EntityType.SLIME)                                                return Skills.slimeDamage;
+			if(entity == EntityType.MAGMA_CUBE)                                           return Skills.magmaCubeDamage;
+			if(entity == EntityType.SILVERFISH)                                           return Skills.silverFishDamage;
+			if(entity == EntityType.WITHER_SKELETON)                                      return Skills.witherSkeletonDamage;
+			if(entity == EntityType.WITHER)                                               return Skills.witherDefense;
+			if(entity == EntityType.ENDER_DRAGON)                                         return Skills.enderDragonDefense;
+			if(entity == EntityType.GUARDIAN)                                             return Skills.guardianDamage;
+			if(entity == EntityType.ELDER_GUARDIAN)                                       return Skills.elderGuardianDamage;
+			if(entity == EntityType.POLAR_BEAR)                                           return Skills.polarBearDamage;
+			if(entity == EntityType.SHULKER)                                              return Skills.shulkerDefense;
+			if(entity == EntityType.LLAMA)                                                return Skills.llamaDefense;
+			if(entity == EntityType.ENDERMITE)                                            return Skills.endermiteDefense;
+			if(entity == EntityType.PARROT)                                               return Skills.parrotDefense;
+			if(entity == EntityType.VEX)                                                  return Skills.vexDamage;
+			if(entity == EntityType.STRAY)                                                return Skills.strayDefense;
+			if(entity == EntityType.EVOKER)                                               return Skills.evokerDefense;
+			if(entity == EntityType.VINDICATOR)                                           return Skills.vindicatorDefense;
+			if(entity == EntityType.ILLUSIONER)                                           return Skills.illusionerDefense;
+			return 0;
+		} catch(Exception e) {
+			return 0;
 		}
 	}
 }

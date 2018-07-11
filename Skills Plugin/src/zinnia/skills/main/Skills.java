@@ -24,17 +24,21 @@ import zinnia.skills.player.SkillPoints;
 import zinnia.skills.player.SkillsCommand;
 import zinnia.skills.utils.ScoreboardData;
 import zinnia.skills.utils.SkillsSave;
+import zinnia.skills.utils.TierUtils;
 
 /*
  * As the packages implies this plugin is made by Zinnia James
  * This plugin uses magic spells for the mana skills and essentialX's economy for enchant cost
- * Note the scoreboard in this plugin is done via reflection
  */
 public class Skills extends JavaPlugin {
 
 	public HashMap<UUID, SkillPoints> playerSkills = new HashMap<UUID, SkillPoints>(); // Hashmap to handle player data with skills
 	public HashMap<UUID, PermissionAttachment> tierPerms = new HashMap<UUID, PermissionAttachment>(); // Hashmap to give player tier perms
 
+	private static Skills skills; // A method to hold the main class
+
+	boolean isLoading;
+	
 	public Menu menu; // Variable for holding the menu object
 	public SkillsCommand sCommand; // Variable for holding the object that does the commands
 
@@ -52,9 +56,12 @@ public class Skills extends JavaPlugin {
 	public Permission tierTen = new Permission("skills.tier.ten"); // Creates permission for tier 10
 
 	public Permission gmPerm = new Permission("skills.leader"); // Creates a permission for leaders to increase tiers
-
 	public Permission adminPerm = new Permission("skills.admin"); // Creates permission for admin
+	public Permission tierResetIncrease = new Permission("skills.tier.resetincrease"); // Creates a perm to reset and increase tier
+	public Permission playerReset = new Permission("skills.player.reset"); // Allows a player to reset their own points
 
+	public Permission tempPerm = new Permission("skills.player.temp"); // Permission to allow a player to give themselves temp skills in a fight and load back to normal skills
+	
 	public FileConfiguration config; // Config file variable
 
 	public boolean useScoreboard = false; // Variable to determine if the scoreboard is going to be used or not
@@ -63,11 +70,13 @@ public class Skills extends JavaPlugin {
 	public static int scoreboardPacketSendPeriod = 2; // The period it takes before it sends another scoreboard packet
 
 	public static boolean tiersIncreaseOnLevel; // Determines if tiers will increase on level
-
+	public static boolean tierResetAuto; // Determines if the tier increases and resets automatically
+	public static boolean skillTreeReset; // Determines if a player maxes out a specific skill if it'll reset their level and all other skills(maxed out skills stay)
+	
 	public static boolean enchantCostMoney; // Determines if enchanting will cost money
-
+	
 	public static double enchantCost = 500; // The cost to use enchantment tables
-
+	
 	/*
 	 * Variables to determine what tiers will be used
 	 */
@@ -81,7 +90,13 @@ public class Skills extends JavaPlugin {
 	public static boolean useTierEight;
 	public static boolean useTierNine;
 	public static boolean useTierTen;
-
+	
+	/*
+	 * Some misc variables that'll determine if we send chat messages on crit or on dodge
+	 */
+	public static boolean _SendCritMessage = true;
+	public static boolean _SendDodgeMessage = true;
+	
 	/*
 	 * Variables to determine what level each tier goes up by
 	 */
@@ -169,34 +184,45 @@ public class Skills extends JavaPlugin {
 	/*
 	 * Variables to hold the max buff from skills
 	 */
-	public static int maxHp = 10000; // Max hp through skills
-	public static int maxDmg = 400; // Max amount of damage through skills 
-	public static int maxDefense = 400; // Max amount of defense through skills
+	public static int maxHp                  = 10000; // Max hp through skills
+	public static int maxDmg                 = 400; // Max amount of damage through skills 
+	public static int maxDefense             = 400; // Max amount of defense through skills
 
-	public static int maxDodge = 90; // Max dodge through skills
-	public static int maxCrit = 90; // Max crit through skills
+	public static int maxDodge               = 90; // Max dodge through skills
+	public static int maxCrit                = 90; // Max crit through skills
 
-	public static int maxMana = 2000; // Max amount of mana through skills
-	public static int maxManaRegen = 250; // Max amount of mana regen through skills
+	public static int maxMana                = 2000; // Max amount of mana through skills
+	public static int maxManaRegen           = 250; // Max amount of mana regen through skills
 
+	/*
+	 * Variables for temporary skill data
+	 */
+	public static int tempxHpPoints          = 25;
+	public static int tempDmgPoints          = 10;
+	public static int tempDefensePoints      = 12;
+	public static int tempDodgePoints        = 5;
+	public static int tempCritPoints         = 2;
+	public static int tempManaPoints         = 10;
+	public static int tempManaRegenPoints    = 10;
+	
 	/*
 	 * Variables for menu position
 	 */
-	public static int menuSize = 45;
-	public static int hpPosition = 20;
-	public static int defensePosition = 22;
-	public static int dmgPosition = 24;
-	public static int dodgePosition = 12;
-	public static int critPosition = 14;
-	public static int manaPosition = 30;
-	public static int manaRegenPosition = 32;
+	public static int menuSize               = 45;
+	public static int hpPosition             = 20;
+	public static int defensePosition        = 22;
+	public static int dmgPosition            = 24;
+	public static int dodgePosition          = 12;
+	public static int critPosition           = 14;
+	public static int manaPosition           = 30;
+	public static int manaRegenPosition      = 32;
 	
 	/*
 	 * Variables for menu items
 	 */
 	public static ItemStack hpItem = new Wool(DyeColor.RED).toItemStack(1);
-	public static ItemStack defenseItem = new Wool(DyeColor.GRAY).toItemStack(1);
 	public static ItemStack damageItem = new Wool(DyeColor.YELLOW).toItemStack(1);
+	public static ItemStack defenseItem = new Wool(DyeColor.GRAY).toItemStack(1);
 	public static ItemStack dodgeItem = new Wool(DyeColor.LIGHT_BLUE).toItemStack(1);
 	public static ItemStack critItem = new Wool(DyeColor.GREEN).toItemStack(1);
 	public static ItemStack manaItem = new Wool(DyeColor.BLUE).toItemStack(1);
@@ -275,6 +301,7 @@ public class Skills extends JavaPlugin {
 	 */
 	@Override
 	public void onEnable() {
+		isLoading = true;
 		config = getConfig(); // Set the config variable
 		skillsFile = new SkillsSave(this); // Initialize the player data file
 
@@ -282,7 +309,7 @@ public class Skills extends JavaPlugin {
 
 		// Register the event listener
 		getServer().getPluginManager().registerEvents(new EventListener(this), this);
-
+		
 		menu = new Menu(this); // Initialize the menu
 		sCommand = new SkillsCommand(this, menu); // Initialize the s command
 
@@ -290,6 +317,9 @@ public class Skills extends JavaPlugin {
 		if (!new File("plugins" + File.separator + "Skills" + File.separator + "config.yml").exists()) saveConfigData();
 
 		loadConfigData(); // Call the load configuration data method
+		
+		skills = this; // Set the skill variable to this instance
+		isLoading = false;
 	}
 
 	/*
@@ -318,6 +348,7 @@ public class Skills extends JavaPlugin {
 	public void loadPointsFile(UUID playerUUID) {
 		try {
 			playerSkills.get(playerUUID).points = skillsFile.config.getInt(playerUUID + ".Skill-Points");
+			playerSkills.get(playerUUID).tierLevel = skillsFile.config.getInt(playerUUID + ".tier-level");
 			playerSkills.get(playerUUID).lastLevel = skillsFile.config.getInt(playerUUID + ".last-level");
 			playerSkills.get(playerUUID).healthPoints = skillsFile.config.getInt(playerUUID + ".Health-Points");
 			playerSkills.get(playerUUID).dmgPoints = skillsFile.config.getInt(playerUUID + ".Damage-Points");
@@ -326,12 +357,15 @@ public class Skills extends JavaPlugin {
 			playerSkills.get(playerUUID).critPoints = skillsFile.config.getInt(playerUUID + ".Crit-Points");
 			playerSkills.get(playerUUID).manaPoints = skillsFile.config.getInt(playerUUID + ".Mana-Points");
 			playerSkills.get(playerUUID).manaRegenPoints = skillsFile.config.getInt(playerUUID + ".Mana-Regen-Points");
-		} catch(Exception e) {}
+			if(!isLoading)
+				TierUtils.loadTier(this, target(playerUUID), playerSkills.get(playerUUID).tierLevel);
+		} catch(Exception e) { e.printStackTrace(); }
 	}
 
 	// Save player data
 	public void savePointsFile(UUID playerUUID) {
 		skillsFile.config.set(playerUUID + ".Skill-Points", playerSkills.get(playerUUID).points);
+		skillsFile.config.set(playerUUID + ".tier-level", playerSkills.get(playerUUID).tierLevel);
 		skillsFile.config.set(playerUUID + ".last-level", playerSkills.get(playerUUID).lastLevel);
 		skillsFile.config.set(playerUUID + ".Health-Points", playerSkills.get(playerUUID).healthPoints);
 		skillsFile.config.set(playerUUID + ".Damage-Points", playerSkills.get(playerUUID).dmgPoints);
@@ -346,25 +380,32 @@ public class Skills extends JavaPlugin {
 	// Load the config file
 	public void loadConfigData() {
 		saveLevel = config.getBoolean("Save-Highest-Level");
-
+		
 		tiersIncreaseOnLevel = config.getBoolean("Increase-Tier-On-Level-Up");
 
+		tierResetAuto = config.getBoolean("auto-reset-tier-increase");
+		skillTreeReset = config.getBoolean("point-max-lvl-reset");
+		
 		enchantCostMoney = config.getBoolean("Enchanting-Cost-Money");
 
 		enchantCost = config.getDouble("Enchant-Cost");
-
+		
 		// Tiers we're using
-		useTierOne = config.getBoolean("Use-Tier1");
-		useTierTwo = config.getBoolean("Use-Tier2");
-		useTierThree = config.getBoolean("Use-Tier3");
-		useTierFour = config.getBoolean("Use-Tier4");
-		useTierFive = config.getBoolean("Use-Tier5");
-		useTierSix = config.getBoolean("Use-Tier6");
-		useTierSeven = config.getBoolean("Use-Tier7");
-		useTierEight = config.getBoolean("Use-Tier8");
-		useTierNine = config.getBoolean("Use-Tier9");
-		useTierTen = config.getBoolean("Use-Tier10");
+		useTierOne = config.getBoolean("Use.Tier1");
+		useTierTwo = config.getBoolean("Use.Tier2");
+		useTierThree = config.getBoolean("Use.Tier3");
+		useTierFour = config.getBoolean("Use.Tier4");
+		useTierFive = config.getBoolean("Use.Tier5");
+		useTierSix = config.getBoolean("Use.Tier6");
+		useTierSeven = config.getBoolean("Use.Tier7");
+		useTierEight = config.getBoolean("Use.Tier8");
+		useTierNine = config.getBoolean("Use.Tier9");
+		useTierTen = config.getBoolean("Use.Tier10");
 
+		// What chat messages we're sending
+		_SendCritMessage = config.getBoolean("Send-Crit-Message");
+		_SendDodgeMessage = config.getBoolean("Send-Dodge-Message");
+		
 		// Level required to increase to x tier
 		tierOneLevel = config.getInt("Tier1-Level");
 		tierTwoLevel = config.getInt("Tier2-Level");
@@ -376,45 +417,45 @@ public class Skills extends JavaPlugin {
 		tierEightLevel = config.getInt("Tier8-Level");
 		tierNineLevel = config.getInt("Tier9-Level");
 		tierTenLevel = config.getInt("Tier10-Level");
-
+		
 		// Tier hp data
-		defaultMaxHp = config.getInt("default-MaxHp");
-		tierOneMaxHp = config.getInt("Tier1-MaxHp");
-		tierTwoMaxHp = config.getInt("Tier2-MaxHp");
-		tierThreeMaxHp = config.getInt("Tier3-MaxHp");
-		tierFourMaxHp = config.getInt("Tier4-MaxHp");
-		tierFiveMaxHp = config.getInt("Tier5-MaxHp");
-		tierSixMaxHp = config.getInt("Tier6-MaxHp");
-		tierSevenMaxHp = config.getInt("Tier7-MaxHp");
-		tierEightMaxHp = config.getInt("Tier8-MaxHp");
-		tierNineMaxHp = config.getInt("Tier9-MaxHp");
-		tierTenMaxHp = config.getInt("Tier10-MaxHp");
+		defaultMaxHp = config.getInt("Tier-Hp.default");
+		tierOneMaxHp = config.getInt("Tier-Hp.Tier1");
+		tierTwoMaxHp = config.getInt("Tier-Hp.Tier2");
+		tierThreeMaxHp = config.getInt("Tier-Hp.Tier3");
+		tierFourMaxHp = config.getInt("Tier-Hp.Tier4");
+		tierFiveMaxHp = config.getInt("Tier-Hp.Tier5");
+		tierSixMaxHp = config.getInt("Tier-Hp.Tier6");
+		tierSevenMaxHp = config.getInt("Tier-Hp.Tier7");
+		tierEightMaxHp = config.getInt("Tier-Hp.Tier8");
+		tierNineMaxHp = config.getInt("Tier-Hp.Tier9");
+		tierTenMaxHp = config.getInt("Tier-Hp.Tier10");
 
 		// Tier mana data
-		defaultMaxMana = config.getInt("default-MaxHp");
-		tierOneMaxMana = config.getInt("Tier1-MaxMana");
-		tierTwoMaxMana = config.getInt("Tier2-MaxMana");
-		tierThreeMaxMana = config.getInt("Tier3-MaxMana");
-		tierFourMaxMana = config.getInt("Tier4-MaxMana");
-		tierFiveMaxMana = config.getInt("Tier5-MaxMana");
-		tierSixMaxMana = config.getInt("Tier6-MaxMana");
-		tierSevenMaxMana = config.getInt("Tier7-MaxMana");
-		tierEightMaxMana = config.getInt("Tier8-MaxMana");
-		tierNineMaxMana = config.getInt("Tier9-MaxMana");
-		tierTenMaxMana = config.getInt("Tier10-MaxMana");
+		defaultMaxMana = config.getInt("Tier-Mana.default");
+		tierOneMaxMana = config.getInt("Tier-Mana.Tier1");
+		tierTwoMaxMana = config.getInt("Tier-Mana.Tier2");
+		tierThreeMaxMana = config.getInt("Tier-Mana.Tier3");
+		tierFourMaxMana = config.getInt("Tier-Mana.Tier4");
+		tierFiveMaxMana = config.getInt("Tier-Mana.Tier5");
+		tierSixMaxMana = config.getInt("Tier-Mana.Tier6");
+		tierSevenMaxMana = config.getInt("Tier-Mana.Tier7");
+		tierEightMaxMana = config.getInt("Tier-Mana.Tier8");
+		tierNineMaxMana = config.getInt("Tier-Mana.Tier9");
+		tierTenMaxMana = config.getInt("Tier-Mana.Tier10");
 
 		// Tier mana regen data
-		defaultRegenMana = config.getInt("default-ManaRegen");
-		tierOneRegenMana = config.getInt("Tier1-ManaRegen");
-		tierTwoRegenMana = config.getInt("Tier2-ManaRegen");
-		tierThreeRegenMana = config.getInt("Tier3-ManaRegen");
-		tierFourRegenMana = config.getInt("Tier4-ManaRegen");
-		tierFiveRegenMana = config.getInt("Tier5-ManaRegen");
-		tierSixRegenMana = config.getInt("Tier6-ManaRegen");
-		tierSevenRegenMana = config.getInt("Tier7-ManaRegen");
-		tierEightRegenMana = config.getInt("Tier8-ManaRegen");
-		tierNineRegenMana = config.getInt("Tier9-ManaRegen");
-		tierTenRegenMana = config.getInt("Tier10-ManaRegen");
+		defaultRegenMana = config.getInt("Tier-Mana-Regen.default");
+		tierOneRegenMana = config.getInt("Tier-Mana-Regen.Tier1");
+		tierTwoRegenMana = config.getInt("Tier-Mana-Regen.Tier2");
+		tierThreeRegenMana = config.getInt("Tier-Mana-Regen.Tier3");
+		tierFourRegenMana = config.getInt("Tier-Mana-Regen.Tier4");
+		tierFiveRegenMana = config.getInt("Tier-Mana-Regen.Tier5");
+		tierSixRegenMana = config.getInt("Tier-Mana-Regen.Tier6");
+		tierSevenRegenMana = config.getInt("Tier-Mana-Regen.Tier7");
+		tierEightRegenMana = config.getInt("Tier-Mana-Regen.Tier8");
+		tierNineRegenMana = config.getInt("Tier-Mana-Regen.Tier9");
+		tierTenRegenMana = config.getInt("Tier-Mana-Regen.Tier10");
 
 		// Determine what skill points we're using
 		useMaxHpSkill = config.getBoolean("Use-MaxHp-Skill");
@@ -426,129 +467,138 @@ public class Skills extends JavaPlugin {
 		useManaRegenSkill = config.getBoolean("Use-ManaRegen-Skill");
 
 		// Max amount of skill points
-		maxHpPoints = config.getInt("maxHp-Skill-Points");
-		maxDmgPoints = config.getInt("maxDmg-Skill-Points");
-		maxDefensePoints = config.getInt("maxDefense-Skill-Points");
-		maxDodgePoints = config.getInt("maxDodge-Skill-Points");
-		maxCritPoints = config.getInt("maxCrit-Skill-Points");
-		maxManaPoints = config.getInt("maxMana-Skill-Points");
-		maxManaRegenPoints = config.getInt("maxMana-Regen-Skill-Points");
+		maxHpPoints = config.getInt("Max-Skill-Ponits.Hp");
+		maxDmgPoints = config.getInt("Max-Skill-Ponits.Dmg");
+		maxDefensePoints = config.getInt("Max-Skill-Ponits.Defense");
+		maxDodgePoints = config.getInt("Max-Skill-Ponits.Dodge");
+		maxCritPoints = config.getInt("Max-Skill-Ponits.Crit");
+		maxManaPoints = config.getInt("Max-Skill-Ponits.Mana");
+		maxManaRegenPoints = config.getInt("Max-Skill-Ponits.Mana-Regen");
 
 		// Max buff amount from skills
-		maxHp = config.getInt("maxHp");
-		maxDmg = config.getInt("maxDmg");
-		maxDefense = config.getInt("maxDefense");
-		maxDodge = config.getInt("maxDodge");
-		maxCrit = config.getInt("maxCrit");
-		maxMana = config.getInt("maxMana");
-		maxManaRegen = config.getInt("maxMana-Regen");
+		maxHp = config.getInt("Max-Buff.Hp");
+		maxDmg = config.getInt("Max-Buff.Dmg");
+		maxDefense = config.getInt("Max-Buff.Defense");
+		maxDodge = config.getInt("Max-Buff.Dodge");
+		maxCrit = config.getInt("Max-Buff.Crit");
+		maxMana = config.getInt("Max-Buff.Mana");
+		maxManaRegen = config.getInt("Max-Buff.Mana-Regen");
 
+		// Temp skill points
+		tempxHpPoints = config.getInt("Temp-Points.Hp");
+		tempDmgPoints = config.getInt("Temp-Points.Damage");
+		tempDefensePoints= config.getInt("Temp-Points.Defense");
+		tempDodgePoints = config.getInt("Temp-Points.Dodge");
+		tempCritPoints = config.getInt("Temp-Points.Crit");
+		tempManaPoints = config.getInt("Temp-Points.Mana");
+		tempManaRegenPoints= config.getInt("Temp-Points.Mana-Regen");
+		
 		// Menu Positions
-		menuSize = config.getInt("menu-size");
-		hpPosition = config.getInt("hp-position");
-		dmgPosition = config.getInt("damage-position");
-		defensePosition = config.getInt("defense-position");
-		dodgePosition = config.getInt("dodge-position");
-		critPosition = config.getInt("crit-position");
-		manaPosition = config.getInt("max-mana-position");
-		manaRegenPosition = config.getInt("mana-regen-position");
+		menuSize = config.getInt("Menu.Size");
+		hpPosition = config.getInt("Menu.Position.Hp");
+		dmgPosition = config.getInt("Menu.Position.Damage");
+		defensePosition = config.getInt("Menu.Position.Defense");
+		dodgePosition = config.getInt("Menu.Position.Dodge");
+		critPosition = config.getInt("Menu.Position.Crit");
+		manaPosition = config.getInt("Menu.Position.Max-Mana");
+		manaRegenPosition = config.getInt("Menu.Position.Mana-Regen");
 		if(menuSize % 9 != 0) { menuSize = 45; System.out.println("Menu Size has to be a multiple of 9!"); }
 		
 		// Menu Items
-		hpItem = config.getItemStack("hp-item");
-		damageItem = config.getItemStack("damage-item");
-		defenseItem = config.getItemStack("defense-item");
-		dodgeItem = config.getItemStack("dodge-item");
-		critItem = config.getItemStack("crit-item");
-		manaItem = config.getItemStack("mana-item");
-		manaRegenItem = config.getItemStack("mana-regen-item");
+		hpItem = config.getItemStack("Menu.Items.Hp");
+		damageItem = config.getItemStack("Menu.Items.Damage");
+		defenseItem = config.getItemStack("Menu.Items.Defense");
+		dodgeItem = config.getItemStack("Menu.Items.Dodge");
+		critItem = config.getItemStack("Menu.Items.Crit");
+		manaItem = config.getItemStack("Menu.Items.Mana");
+		manaRegenItem = config.getItemStack("Menu.Items.Mana-Regen");
 		
 		// Scoreboard Data
 		scoreboardPacketSendPeriod = config.getInt("Seconds-Each-Scoreboard-Packet-Is-Sent");
 
 		// Load all the data to tell us which scores we're using for the scoreboard
-		ScoreboardData._UseScore0 = config.getBoolean("Scoreboard-Slot-0");
-		ScoreboardData._UseScore1 = config.getBoolean("Scoreboard-Slot-1");
-		ScoreboardData._UseScore2 = config.getBoolean("Scoreboard-Slot-2");
-		ScoreboardData._UseScore3 = config.getBoolean("Scoreboard-Slot-3");
-		ScoreboardData._UseScore4 = config.getBoolean("Scoreboard-Slot-4");
-		ScoreboardData._UseScore5 = config.getBoolean("Scoreboard-Slot-5");
-		ScoreboardData._UseScore6 = config.getBoolean("Scoreboard-Slot-6");
-		ScoreboardData._UseScore7 = config.getBoolean("Scoreboard-Slot-7");
-		ScoreboardData._UseScore8 = config.getBoolean("Scoreboard-Slot-8");
-		ScoreboardData._UseScore9 = config.getBoolean("Scoreboard-Slot-9");
-		ScoreboardData._UseScore10 = config.getBoolean("Scoreboard-Slot-10");
-		ScoreboardData._UseScore11 = config.getBoolean("Scoreboard-Slot-11");
-		ScoreboardData._UseScore12 = config.getBoolean("Scoreboard-Slot-12");
-		ScoreboardData._UseScore13 = config.getBoolean("Scoreboard-Slot-13");
-		ScoreboardData._UseScore14 = config.getBoolean("Scoreboard-Slot-14");
-		ScoreboardData._UseScore15 = config.getBoolean("Scoreboard-Slot-15");
+		ScoreboardData._UseScore0 = config.getBoolean("Scoreboard.Use-Slot-0");
+		ScoreboardData._UseScore1 = config.getBoolean("Scoreboard.Use-Slot-1");
+		ScoreboardData._UseScore2 = config.getBoolean("Scoreboard.Use-Slot-2");
+		ScoreboardData._UseScore3 = config.getBoolean("Scoreboard.Use-Slot-3");
+		ScoreboardData._UseScore4 = config.getBoolean("Scoreboard.Use-Slot-4");
+		ScoreboardData._UseScore5 = config.getBoolean("Scoreboard.Use-Slot-5");
+		ScoreboardData._UseScore6 = config.getBoolean("Scoreboard.Use-Slot-6");
+		ScoreboardData._UseScore7 = config.getBoolean("Scoreboard.Use-Slot-7");
+		ScoreboardData._UseScore8 = config.getBoolean("Scoreboard.Use-Slot-8");
+		ScoreboardData._UseScore9 = config.getBoolean("Scoreboard.Use-Slot-9");
+		ScoreboardData._UseScore10 = config.getBoolean("Scoreboard.Use-Slot-10");
+		ScoreboardData._UseScore11 = config.getBoolean("Scoreboard.Use-Slot-11");
+		ScoreboardData._UseScore12 = config.getBoolean("Scoreboard.Use-Slot-12");
+		ScoreboardData._UseScore13 = config.getBoolean("Scoreboard.Use-Slot-13");
+		ScoreboardData._UseScore14 = config.getBoolean("Scoreboard.Use-Slot-14");
+		ScoreboardData._UseScore15 = config.getBoolean("Scoreboard.Use-Slot-15");
 		
 		/*
 		 * Mob Damage
 		 */
-		zombieDamage = config.getDouble("zombie-damage");
-		zombieVillagerDamage = config.getDouble("zombie-villager-damage");
-		giantDamage = config.getDouble("gaint-damage");
-		skeletonDamage = config.getDouble("skeleton-damage");
-		spiderDamage = config.getDouble("spider-damage");
-		caveSpiderDamage = config.getDouble("cave-spider-damage");
-		endermanDamage = config.getDouble("enderman-damage");
-		wolfDamage = config.getDouble("wolf-damage");
-		blazeDamage = config.getDouble("blaze-damage");
-		slimeDamage = config.getDouble("slime-damage");
-		magmaCubeDamage = config.getDouble("magma-cube-damage");
-		silverFishDamage = config.getDouble("silver-fish-damage");
-		witherSkeletonDamage = config.getDouble("wither-skeleton-damage");
-		guardianDamage = config.getDouble("guardian-damage");
-		elderGuardianDamage = config.getDouble("elder-guardian-damage");
-		polarBearDamage = config.getDouble("polar-bear-damage");
-		vexDamage = config.getDouble("vex-damage");
+		zombieDamage = config.getDouble("Mob.Damage.zombie");
+		zombieVillagerDamage = config.getDouble("Mob.Damage.zombie-villager");
+		giantDamage = config.getDouble("Mob.Damage.gaint");
+		skeletonDamage = config.getDouble("Mob.Damage.skeleton");
+		spiderDamage = config.getDouble("Mob.Damage.spider");
+		caveSpiderDamage = config.getDouble("Mob.Damage.cave-spider");
+		endermanDamage = config.getDouble("Mob.Damage.enderman");
+		wolfDamage = config.getDouble("Mob.Damage.wolf");
+		blazeDamage = config.getDouble("Mob.Damage.blaze");
+		slimeDamage = config.getDouble("Mob.Damage.slime");
+		magmaCubeDamage = config.getDouble("Mob.Damage.magma-cube");
+		silverFishDamage = config.getDouble("Mob.Damage.silver-fish");
+		witherSkeletonDamage = config.getDouble("Mob.Damage.wither-skeleton");
+		guardianDamage = config.getDouble("Mob.Damage.guardian");
+		elderGuardianDamage = config.getDouble("Mob.Damage.elder-guardian");
+		polarBearDamage = config.getDouble("Mob.Damage.polar-bear");
+		vexDamage = config.getDouble("Mob.Damage.vex");
 		
 		/*
 		 * Mob Defense
 		 */
-		ocelotDefense = config.getDouble("ocelot-defense");
-		horseDefense = config.getDouble("horse-defense");
-		rabbitDefense = config.getDouble("rabbit-defense");
-		sheepDefense = config.getDouble("sheep-defense");
-		pigDefense = config.getDouble("pig-defense");
-		chickenDefense = config.getDouble("chicken-defense");
-		cowDefense = config.getDouble("cow-defense");
-		mooshroomDefense = config.getDouble("mooshroom-defense");
-		squidDefense = config.getDouble("squid-defense");
-		batDefense = config.getDouble("bat-defense");
-		villagerDefense = config.getDouble("villager-defense");
-		zombieDefense = config.getDouble("zombie-defense");
-		zombieVillagerDefense = config.getDouble("zombie-villager-defense");
-		giantDefense = config.getDouble("giant-defense");
-		zombiePigmanDefense = config.getDouble("zombie-pigman-defense");
-		skeletonDefense = config.getDouble("skeleton-defense");
-		spiderDefense = config.getDouble("spider-defense");
-		caveSpiderDefense = config.getDouble("cave-spider-defense");
-		creeperDefense = config.getDouble("creeper-defense");
-		endermanDefense = config.getDouble("enderman-defense");
-		wolfDefense = config.getDouble("wolf-defense");
-		witchDefense = config.getDouble("witch-defense");
-		blazeDefense = config.getDouble("blaze-defense");
-		slimeDefense = config.getDouble("slime-defense");
-		magmaCubeDefense = config.getDouble("magma-cube-defense");
-		silverFishDefense = config.getDouble("silver-fish-defense");
-		witherSkeletonDefense = config.getDouble("wither-skeleton-defense");
-		witherDefense = config.getDouble("wither-defense");
-		enderDragonDefense = config.getDouble("ender-dragon-defense");
-		guardianDefense = config.getDouble("guardian-defense");
-		elderGuardianDefense = config.getDouble("elder-guardian-defense");
-		polarBearDefense = config.getDouble("polar-bear-defense");
-		shulkerDefense = config.getDouble("shulker-defense");
-		llamaDefense = config.getDouble("llama-defense");
-		endermiteDefense = config.getDouble("endermite-defense");
-		parrotDefense = config.getDouble("parrot-defense");
-		vexDefense = config.getDouble("vex-defense");
-		strayDefense = config.getDouble("stray-defense");
-		evokerDefense = config.getDouble("evoker-defense");
-		vindicatorDefense = config.getDouble("vindicator-defense");
-		illusionerDefense = config.getDouble("illusioner-defense");
+		ocelotDefense = config.getDouble("Mob.Defense.ocelot");
+		horseDefense = config.getDouble("Mob.Defense.horse");
+		rabbitDefense = config.getDouble("Mob.Defense.rabbit");
+		sheepDefense = config.getDouble("Mob.Defense.sheep");
+		pigDefense = config.getDouble("Mob.Defense.pig");
+		chickenDefense = config.getDouble("Mob.Defense.chicken");
+		cowDefense = config.getDouble("Mob.Defense.cow");
+		mooshroomDefense = config.getDouble("Mob.Defense.mooshroom");
+		squidDefense = config.getDouble("Mob.Defense.squid");
+		batDefense = config.getDouble("Mob.Defense.bat");
+		villagerDefense = config.getDouble("Mob.Defense.villager");
+		zombieDefense = config.getDouble("Mob.Defense.zombie");
+		zombieVillagerDefense = config.getDouble("Mob.Defense.zombie-villager");
+		giantDefense = config.getDouble("Mob.Defense.giant");
+		zombiePigmanDefense = config.getDouble("Mob.Defense.zombie-pigman");
+		skeletonDefense = config.getDouble("Mob.Defense.skeleton");
+		spiderDefense = config.getDouble("Mob.Defense.spider");
+		caveSpiderDefense = config.getDouble("Mob.Defense.cave-spider");
+		creeperDefense = config.getDouble("Mob.Defense.creeper");
+		endermanDefense = config.getDouble("Mob.Defense.enderman");
+		wolfDefense = config.getDouble("Mob.Defense.wolf");
+		witchDefense = config.getDouble("Mob.Defense.witch");
+		blazeDefense = config.getDouble("Mob.Defense.blaze");
+		slimeDefense = config.getDouble("Mob.Defense.slime");
+		magmaCubeDefense = config.getDouble("Mob.Defense.magma-cube");
+		silverFishDefense = config.getDouble("Mob.Defense.silver-fish");
+		witherSkeletonDefense = config.getDouble("Mob.Defense.wither-skeleton");
+		witherDefense = config.getDouble("Mob.Defense.wither");
+		enderDragonDefense = config.getDouble("Mob.Defense.ender-dragon");
+		guardianDefense = config.getDouble("Mob.Defense.guardian");
+		elderGuardianDefense = config.getDouble("Mob.Defense.elder-guardian");
+		polarBearDefense = config.getDouble("Mob.Defense.polar-bear");
+		shulkerDefense = config.getDouble("Mob.Defense.shulker");
+		llamaDefense = config.getDouble("Mob.Defense.llama");
+		endermiteDefense = config.getDouble("Mob.Defense.endermite");
+		parrotDefense = config.getDouble("Mob.Defense.parrot");
+		vexDefense = config.getDouble("Mob.Defense.vex");
+		strayDefense = config.getDouble("Mob.Defense.stray");
+		evokerDefense = config.getDouble("Mob.Defense.evoker");
+		vindicatorDefense = config.getDouble("Mob.Defense.vindicator");
+		illusionerDefense = config.getDouble("Mob.Defense.illusioner");
 		
 	}
 
@@ -557,73 +607,79 @@ public class Skills extends JavaPlugin {
 		config.set("Save-Highest-Level", saveLevel);
 
 		config.set("Increase-Tier-On-Level-Up", tiersIncreaseOnLevel);
-
+		config.set("auto-reset-tier-increase", tierResetAuto);
+		config.set("point-max-lvl-reset", skillTreeReset);
+		
 		config.set("Enchanting-Cost-Money", enchantCostMoney);
 
 		config.set("Enchant-Cost", enchantCost);
-
+		
 		// Tiers we're using
-		config.set("Use-Tier1", useTierOne);
-		config.set("Use-Tier2", useTierTwo);
-		config.set("Use-Tier3", useTierThree);
-		config.set("Use-Tier4", useTierFour);
-		config.set("Use-Tier5", useTierFive);
-		config.set("Use-Tier6", useTierSix);
-		config.set("Use-Tier7", useTierSeven);
-		config.set("Use-Tier8", useTierEight);
-		config.set("Use-Tier9", useTierNine);
-		config.set("Use-Tier10", useTierTen);
+		config.set("Use.Tier1", useTierOne);
+		config.set("Use.Tier2", useTierTwo);
+		config.set("Use.Tier3", useTierThree);
+		config.set("Use.Tier4", useTierFour);
+		config.set("Use.Tier5", useTierFive);
+		config.set("Use.Tier6", useTierSix);
+		config.set("Use.Tier7", useTierSeven);
+		config.set("Use.Tier8", useTierEight);
+		config.set("Use.Tier9", useTierNine);
+		config.set("Use.Tier10", useTierTen);
+		
+		// What chat messages we're sending
+		config.set("Send-Crit-Message", _SendCritMessage);
+		config.set("Send-Dodge-Message", _SendDodgeMessage);
 
 		// Tier1-Level
-		config.set("Tier1-Level", tierOneLevel);
-		config.set("Tier2-Level", tierTwoLevel);
-		config.set("Tier3-Level", tierThreeLevel);
-		config.set("Tier4-Level", tierFourLevel);
-		config.set("Tier5-Level", tierFiveLevel);
-		config.set("Tier6-Level", tierSixLevel);
-		config.set("Tier7-Level", tierSevenLevel);
-		config.set("Tier8-Level", tierEightLevel);
-		config.set("Tier9-Level", tierNineLevel);
-		config.set("Tier10-Level", tierTenLevel);
+		config.set("Tier-Level.Tier1", tierOneLevel);
+		config.set("Tier-Level.Tier2", tierTwoLevel);
+		config.set("Tier-Level.Tier3", tierThreeLevel);
+		config.set("Tier-Level.Tier4", tierFourLevel);
+		config.set("Tier-Level.Tier5", tierFiveLevel);
+		config.set("Tier-Level.Tier6", tierSixLevel);
+		config.set("Tier-Level.Tier7", tierSevenLevel);
+		config.set("Tier-Level.Tier8", tierEightLevel);
+		config.set("Tier-Level.Tier9", tierNineLevel);
+		config.set("Tier-Level.Tier10", tierTenLevel);
 
 		// Tier max hp data
-		config.set("default-MaxHp",   defaultMaxHp);
-		config.set("Tier1-MaxHp",     tierOneMaxHp);
-		config.set("Tier2-MaxHp",     tierTwoMaxHp);
-		config.set("Tier3-MaxHp",     tierThreeMaxHp);
-		config.set("Tier4-MaxHp",     tierFourMaxHp);
-		config.set("Tier5-MaxHp",     tierFiveMaxHp);
-		config.set("Tier6-MaxHp",     tierSixMaxHp);
-		config.set("Tier7-MaxHp",     tierSevenMaxHp);
-		config.set("Tier8-MaxHp",     tierEightMaxHp);
-		config.set("Tier9-MaxHp",     tierNineMaxHp);
-		config.set("Tier10-MaxHp",    tierTenMaxHp);
+		config.set("Tier-Hp.default",   defaultMaxHp);
+		config.set("Tier-Hp.Tier1",     tierOneMaxHp);
+		config.set("Tier-Hp.Tier2",     tierTwoMaxHp);
+		config.set("Tier-Hp.Tier3",     tierThreeMaxHp);
+		config.set("Tier-Hp.Tier4",     tierFourMaxHp);
+		config.set("Tier-Hp.Tier5",     tierFiveMaxHp);
+		config.set("Tier-Hp.Tier6",     tierSixMaxHp);
+		config.set("Tier-Hp.Tier7",     tierSevenMaxHp);
+		config.set("Tier-Hp.Tier8",     tierEightMaxHp);
+		config.set("Tier-Hp.Tier9",     tierNineMaxHp);
+		config.set("Tier-Hp.Tier10",    tierTenMaxHp);
 
 		// Tier max mana data
-		config.set("default-MaxMana",   defaultMaxMana);
-		config.set("Tier1-MaxMana",     tierOneMaxMana);
-		config.set("Tier2-MaxMana",     tierTwoMaxMana);
-		config.set("Tier3-MaxMana",     tierThreeMaxMana);
-		config.set("Tier4-MaxMana",     tierFourMaxMana);
-		config.set("Tier5-MaxMana",     tierFiveMaxMana);
-		config.set("Tier6-MaxMana",     tierSixMaxMana);
-		config.set("Tier7-MaxMana",     tierSevenMaxMana);
-		config.set("Tier8-MaxMana",     tierEightMaxMana);
-		config.set("Tier9-MaxMana",     tierNineMaxMana);
-		config.set("Tier10-MaxMana",    tierTenMaxMana);
+		config.set("Tier-Mana.default",   defaultMaxMana);
+		config.set("Tier-Mana.Tier1",     tierOneMaxMana);
+		config.set("Tier-Mana.Tier2",     tierTwoMaxMana);
+		config.set("Tier-Mana.Tier3",     tierThreeMaxMana);
+		config.set("Tier-Mana.Tier4",     tierFourMaxMana);
+		config.set("Tier-Mana.Tier5",     tierFiveMaxMana);
+		config.set("Tier-Mana.Tier6",     tierSixMaxMana);
+		config.set("Tier-Mana.Tier7",     tierSevenMaxMana);
+		config.set("Tier-Mana.Tier8",     tierEightMaxMana);
+		config.set("Tier-Mana.Tier9",     tierNineMaxMana);
+		config.set("Tier-Mana.Tier10",    tierTenMaxMana);
 
 		// Tier mana regen data
-		config.set("default-ManaRegen",   defaultRegenMana);
-		config.set("Tier1-ManaRegen",     tierOneRegenMana);
-		config.set("Tier2-ManaRegen",     tierTwoRegenMana);
-		config.set("Tier3-ManaRegen",     tierThreeRegenMana);
-		config.set("Tier4-ManaRegen",     tierFourRegenMana);
-		config.set("Tier5-ManaRegen",     tierFiveRegenMana);
-		config.set("Tier6-ManaRegen",     tierSixRegenMana);
-		config.set("Tier7-ManaRegen",     tierSevenRegenMana);
-		config.set("Tier8-ManaRegen",     tierEightRegenMana);
-		config.set("Tier9-ManaRegen",     tierNineRegenMana);
-		config.set("Tier10-ManaRegen",    tierTenRegenMana);
+		config.set("Tier-Mana-Regen.default",   defaultRegenMana);
+		config.set("Tier-Mana-Regen.Tier1",     tierOneRegenMana);
+		config.set("Tier-Mana-Regen.Tier2",     tierTwoRegenMana);
+		config.set("Tier-Mana-Regen.Tier3",     tierThreeRegenMana);
+		config.set("Tier-Mana-Regen.Tier4",     tierFourRegenMana);
+		config.set("Tier-Mana-Regen.Tier5",     tierFiveRegenMana);
+		config.set("Tier-Mana-Regen.Tier6",     tierSixRegenMana);
+		config.set("Tier-Mana-Regen.Tier7",     tierSevenRegenMana);
+		config.set("Tier-Mana-Regen.Tier8",     tierEightRegenMana);
+		config.set("Tier-Mana-Regen.Tier9",     tierNineRegenMana);
+		config.set("Tier-Mana-Regen.Tier10",    tierTenRegenMana);
 
 		// Determine what skills we're using
 		config.set("Use-MaxHp-Skill", useMaxHpSkill);
@@ -635,130 +691,138 @@ public class Skills extends JavaPlugin {
 		config.set("Use-ManaRegen-Skill", useManaRegenSkill);
 
 		// Max amount of skill points
-		config.set("maxHp-Skill-Points", maxHpPoints);
-		config.set("maxDmg-Skill-Points", maxDmgPoints);
-		config.set("maxDefense-Skill-Points", maxDefensePoints);
-		config.set("maxDodge-Skill-Points", maxDodgePoints);
-		config.set("maxCrit-Skill-Points", maxCritPoints);
-		config.set("maxMana-Skill-Points", maxManaPoints);
-		config.set("maxMana-Regen-Skill-Points", maxManaRegenPoints);
+		config.set("Max-Skill-Ponits.Hp", maxHpPoints);
+		config.set("Max-Skill-Ponits.Dmg", maxDmgPoints);
+		config.set("Max-Skill-Ponits.Defense", maxDefensePoints);
+		config.set("Max-Skill-Ponits.Dodge", maxDodgePoints);
+		config.set("Max-Skill-Ponits.Crit", maxCritPoints);
+		config.set("Max-Skill-Ponits.Mana", maxManaPoints);
+		config.set("Max-Skill-Ponits.Mana-Regen", maxManaRegenPoints);
 
 		// Max buff amount from skills
-		config.set("maxHp", maxHp);
-		config.set("maxDmg", maxDmg);
-		config.set("maxDefense", maxDefense);
-		config.set("maxDodge", maxDodge);
-		config.set("maxCrit", maxCrit);
-		config.set("maxMana", maxMana);
-		config.set("maxMana-Regen", maxManaRegen);
+		config.set("Max-Buff.Hp", maxHp);
+		config.set("Max-Buff.Dmg", maxDmg);
+		config.set("Max-Buff.Defense", maxDefense);
+		config.set("Max-Buff.Dodge", maxDodge);
+		config.set("Max-Buff.Crit", maxCrit);
+		config.set("Max-Buff.Mana", maxMana);
+		config.set("Max-Buff.Mana-Regen", maxManaRegen);
 
+		// Temp skill points
+		config.set("Temp-Points.Hp", tempxHpPoints);
+		config.set("Temp-Points.Damage", tempDmgPoints);
+		config.set("Temp-Points.Defense", tempDefensePoints);
+		config.set("Temp-Points.Dodge", tempDodgePoints);
+		config.set("Temp-Points.Crit", tempCritPoints);
+		config.set("Temp-Points.Mana", tempManaPoints);
+		config.set("Temp-Points.Mana-Regen", tempManaRegenPoints);
 		
 		// Menu positions
-		config.set("menu-size", menuSize);
-		config.set("hp-position", hpPosition);
-		config.set("damage-position", dmgPosition);
-		config.set("defense-position", defensePosition);
-		config.set("dodge-position", dodgePosition);
-		config.set("crit-position", critPosition);
-		config.set("max-mana-position", manaPosition);
-		config.set("mana-regen-position", manaRegenPosition);
+		config.set("Menu.Size", menuSize);
+		config.set("Menu.Position.Hp", hpPosition);
+		config.set("Menu.Position.Damage", dmgPosition);
+		config.set("Menu.Position.Defense", defensePosition);
+		config.set("Menu.Position.Dodge", dodgePosition);
+		config.set("Menu.Position.Crit", critPosition);
+		config.set("Menu.Position.Max-Mana", manaPosition);
+		config.set("Menu.Position.Mana-Regen", manaRegenPosition);
 		
 		// Menu Items
-		config.set("hp-item", hpItem);
-		config.set("damage-item", damageItem);
-		config.set("defense-item", defenseItem);
-		config.set("dodge-item", dodgeItem);
-		config.set("crit-item", critItem);
-		config.set("mana-item", manaItem);
-		config.set("mana-regen-item", manaRegenItem);
+		config.set("Menu.Items.Hp", hpItem);
+		config.set("Menu.Items.Damage", damageItem);
+		config.set("Menu.Items.Defense", defenseItem);
+		config.set("Menu.Items.Dodge", dodgeItem);
+		config.set("Menu.Items.Crit", critItem);
+		config.set("Menu.Items.Mana", manaItem);
+		config.set("Menu.Items.Mana-Regen", manaRegenItem);
 		
 		// Scoreboard data
 		config.set("Seconds-Each-Scoreboard-Packet-Is-Sent", scoreboardPacketSendPeriod);
 
 		// Set all the use score data
-		config.set("Scoreboard-Slot-0", ScoreboardData._UseScore0);
-		config.set("Scoreboard-Slot-1", ScoreboardData._UseScore1);
-		config.set("Scoreboard-Slot-2", ScoreboardData._UseScore2);
-		config.set("Scoreboard-Slot-3", ScoreboardData._UseScore3);
-		config.set("Scoreboard-Slot-4", ScoreboardData._UseScore4);
-		config.set("Scoreboard-Slot-5", ScoreboardData._UseScore5);
-		config.set("Scoreboard-Slot-6", ScoreboardData._UseScore6);
-		config.set("Scoreboard-Slot-7", ScoreboardData._UseScore7);
-		config.set("Scoreboard-Slot-8", ScoreboardData._UseScore8);
-		config.set("Scoreboard-Slot-9", ScoreboardData._UseScore9);
-		config.set("Scoreboard-Slot-10", ScoreboardData._UseScore10);
-		config.set("Scoreboard-Slot-11", ScoreboardData._UseScore11);
-		config.set("Scoreboard-Slot-12", ScoreboardData._UseScore12);
-		config.set("Scoreboard-Slot-13", ScoreboardData._UseScore13);
-		config.set("Scoreboard-Slot-14", ScoreboardData._UseScore14);
-		config.set("Scoreboard-Slot-15", ScoreboardData._UseScore15);
+		config.set("Scoreboard.Use-Slot-0", ScoreboardData._UseScore0);
+		config.set("Scoreboard.Use-Slot-1", ScoreboardData._UseScore1);
+		config.set("Scoreboard.Use-Slot-2", ScoreboardData._UseScore2);
+		config.set("Scoreboard.Use-Slot-3", ScoreboardData._UseScore3);
+		config.set("Scoreboard.Use-Slot-4", ScoreboardData._UseScore4);
+		config.set("Scoreboard.Use-Slot-5", ScoreboardData._UseScore5);
+		config.set("Scoreboard.Use-Slot-6", ScoreboardData._UseScore6);
+		config.set("Scoreboard.Use-Slot-7", ScoreboardData._UseScore7);
+		config.set("Scoreboard.Use-Slot-8", ScoreboardData._UseScore8);
+		config.set("Scoreboard.Use-Slot-9", ScoreboardData._UseScore9);
+		config.set("Scoreboard.Use-Slot-10", ScoreboardData._UseScore10);
+		config.set("Scoreboard.Use-Slot-11", ScoreboardData._UseScore11);
+		config.set("Scoreboard.Use-Slot-12", ScoreboardData._UseScore12);
+		config.set("Scoreboard.Use-Slot-13", ScoreboardData._UseScore13);
+		config.set("Scoreboard.Use-Slot-14", ScoreboardData._UseScore14);
+		config.set("Scoreboard.Use-Slot-15", ScoreboardData._UseScore15);
 
 		/*
 		 * Mob damage
 		 */
-		config.set("zombie-damage", zombieDamage);
-		config.set("zombie-villager-damage", zombieVillagerDamage);
-		config.set("gaint-damage", giantDamage);
-		config.set("skeleton-damage", skeletonDamage);
-		config.set("spider-damage", spiderDamage);
-		config.set("cave-spider-damage", caveSpiderDamage);
-		config.set("enderman-damage", endermanDamage);
-		config.set("wolf-damage", wolfDamage);
-		config.set("blaze-damage", blazeDamage);
-		config.set("slime-damage", slimeDamage);
-		config.set("magma-cube-damage", magmaCubeDamage);
-		config.set("silver-fish-damage", silverFishDamage);
-		config.set("wither-skeleton-damage", witherSkeletonDamage);
-		config.set("guardian-damage", guardianDamage);
-		config.set("elder-guardian-damage", elderGuardianDamage);
-		config.set("polar-bear-damage", polarBearDamage);
-		config.set("vex-damage", vexDamage);
+		config.set("Mob.Damage.zombie", zombieDamage);
+		config.set("Mob.Damage.zombie-villager", zombieVillagerDamage);
+		config.set("Mob.Damage.gaint", giantDamage);
+		config.set("Mob.Damage.skeleton", skeletonDamage);
+		config.set("Mob.Damage.spider", spiderDamage);
+		config.set("Mob.Damage.cave-spider", caveSpiderDamage);
+		config.set("Mob.Damage.enderman", endermanDamage);
+		config.set("Mob.Damage.wolf", wolfDamage);
+		config.set("Mob.Damage.blaze", blazeDamage);
+		config.set("Mob.Damage.slime", slimeDamage);
+		config.set("Mob.Damage.magma-cube", magmaCubeDamage);
+		config.set("Mob.Damage.silver-fish", silverFishDamage);
+		config.set("Mob.Damage.wither-skeleton", witherSkeletonDamage);
+		config.set("Mob.Damage.guardian", guardianDamage);
+		config.set("Mob.Damage.elder-guardian", elderGuardianDamage);
+		config.set("Mob.Damage.polar-bear", polarBearDamage);
+		config.set("Mob.Damage.vex", vexDamage);
 		
 		/*
 		 * Mob defense
 		 */
 		
-		config.set("ocelot-defense", ocelotDefense);
-		config.set("horse-defense", horseDefense);
-		config.set("rabbit-defense", rabbitDefense);
-		config.set("sheep-defense", sheepDefense);
-		config.set("pig-defense", pigDefense);
-		config.set("chicken-defense", chickenDefense);
-		config.set("cow-defense", cowDefense);
-		config.set("mooshroom-defense", mooshroomDefense);
-		config.set("squid-defense", squidDefense);
-		config.set("bat-defense", batDefense);
-		config.set("villager-defense", villagerDefense);
-		config.set("zombie-defense", zombieDefense);
-		config.set("zombie-villager-defense", zombieVillagerDefense);
-		config.set("giant-defense", giantDefense);
-		config.set("zombie-pigman-defense", zombiePigmanDefense);
-		config.set("skeleton-defense", skeletonDefense);
-		config.set("spider-defense", spiderDefense);
-		config.set("cave-spider-defense", caveSpiderDefense);
-		config.set("creeper-defense", creeperDefense);
-		config.set("enderman-defense", endermanDefense);
-		config.set("wolf-defense", wolfDefense);
-		config.set("witch-defense", witchDefense);
-		config.set("blaze-defense", blazeDefense);
-		config.set("slime-defense", slimeDefense);
-		config.set("magma-cube-defense", magmaCubeDefense);
-		config.set("silver-fish-defense", silverFishDefense);
-		config.set("wither-skeleton-defense", witherSkeletonDefense);
-		config.set("wither-defense", witherDefense);
-		config.set("ender-dragon-defense", enderDragonDefense);
-		config.set("guardian-defense", guardianDefense);
-		config.set("elder-guardian-defense", elderGuardianDefense);
-		config.set("polar-bear-defense", polarBearDefense);
-		config.set("shulker-defense", shulkerDefense);
-		config.set("llama-defense", llamaDefense);
-		config.set("endermite-defense", endermiteDefense);
-		config.set("parrot-defense", parrotDefense);
-		config.set("vex-defense", vexDefense);
-		config.set("stray-defense", strayDefense);
-		config.set("evoker-defense", evokerDefense);
-		config.set("vindicator-defense", vindicatorDefense);
-		config.set("illusioner-defense", illusionerDefense);
+		config.set("Mob.Defense.ocelot", ocelotDefense);
+		config.set("Mob.Defense.horse", horseDefense);
+		config.set("Mob.Defense.rabbit", rabbitDefense);
+		config.set("Mob.Defense.sheep", sheepDefense);
+		config.set("Mob.Defense.pig", pigDefense);
+		config.set("Mob.Defense.chicken", chickenDefense);
+		config.set("Mob.Defense.cow", cowDefense);
+		config.set("Mob.Defense.mooshroom", mooshroomDefense);
+		config.set("Mob.Defense.squid", squidDefense);
+		config.set("Mob.Defense.bat", batDefense);
+		config.set("Mob.Defense.villager", villagerDefense);
+		config.set("Mob.Defense.zombie", zombieDefense);
+		config.set("Mob.Defense.zombie-villager", zombieVillagerDefense);
+		config.set("Mob.Defense.giant", giantDefense);
+		config.set("Mob.Defense.zombie-pigman", zombiePigmanDefense);
+		config.set("Mob.Defense.skeleton", skeletonDefense);
+		config.set("Mob.Defense.spider", spiderDefense);
+		config.set("Mob.Defense.cave-spider", caveSpiderDefense);
+		config.set("Mob.Defense.creeper", creeperDefense);
+		config.set("Mob.Defense.enderman", endermanDefense);
+		config.set("Mob.Defense.wolf", wolfDefense);
+		config.set("Mob.Defense.witch", witchDefense);
+		config.set("Mob.Defense.blaze", blazeDefense);
+		config.set("Mob.Defense.slime", slimeDefense);
+		config.set("Mob.Defense.magma-cube", magmaCubeDefense);
+		config.set("Mob.Defense.silver-fish", silverFishDefense);
+		config.set("Mob.Defense.wither-skeleton", witherSkeletonDefense);
+		config.set("Mob.Defense.wither", witherDefense);
+		config.set("Mob.Defense.ender-dragon", enderDragonDefense);
+		config.set("Mob.Defense.guardian", guardianDefense);
+		config.set("Mob.Defense.elder-guardian", elderGuardianDefense);
+		config.set("Mob.Defense.polar-bear", polarBearDefense);
+		config.set("Mob.Defense.shulker", shulkerDefense);
+		config.set("Mob.Defense.llama", llamaDefense);
+		config.set("Mob.Defense.endermite", endermiteDefense);
+		config.set("Mob.Defense.parrot", parrotDefense);
+		config.set("Mob.Defense.vex", vexDefense);
+		config.set("Mob.Defense.stray", strayDefense);
+		config.set("Mob.Defense.evoker", evokerDefense);
+		config.set("Mob.Defense.vindicator", vindicatorDefense);
+		config.set("Mob.Defense.illusioner", illusionerDefense);
 		
 		saveConfig(); // Save the config
 	}
@@ -776,6 +840,7 @@ public class Skills extends JavaPlugin {
 			// Check if the hashmap doesn't have the player's UUID
 			if(!playerSkills.containsKey(p.getUniqueId())) { 
 				playerSkills.put(p.getUniqueId(), new SkillPoints()); // Add them to the hashmap
+				playerSkills.get(p.getUniqueId()).tierLevel = 0;
 				playerSkills.get(p.getUniqueId()).points = 0; // Set the points to zero
 				playerSkills.get(p.getUniqueId()).healthPoints = 0; // Set the health points to zero
 				playerSkills.get(p.getUniqueId()).dodgePoints = 0; // Set the dodge points to zero
@@ -790,6 +855,7 @@ public class Skills extends JavaPlugin {
 		for(OfflinePlayer p : getServer().getOfflinePlayers()) {
 			if(!playerSkills.containsKey(p.getUniqueId())) {
 				playerSkills.put(p.getUniqueId(), new SkillPoints());
+				playerSkills.get(p.getUniqueId()).tierLevel = 0;
 				playerSkills.get(p.getUniqueId()).points = 0;
 				playerSkills.get(p.getUniqueId()).healthPoints = 0;	
 				playerSkills.get(p.getUniqueId()).dodgePoints = 0;	
@@ -801,12 +867,20 @@ public class Skills extends JavaPlugin {
 		}
 	}
 
-	// Check if the target is online
+	// Check if the target is online, using the player's name
 	public boolean targetIsOnline(String target) {
 		for(Player p : Bukkit.getOnlinePlayers()) // Loop through the online players.
 			if(p.getName().equalsIgnoreCase(target)) // Get the target's name
 				return true;
 
+		return false;
+	}
+	
+	// Check if the target is online, using the UUID
+	public boolean targetIsOnline(UUID target) {
+		for(Player p : Bukkit.getOnlinePlayers()) // Loop through the online players.
+			if(p.getUniqueId() == target) // Get the target's name
+				return true;
 		return false;
 	}
 
@@ -826,5 +900,16 @@ public class Skills extends JavaPlugin {
 			System.out.println("" + ChatColor.RED + "That player is offline!");
 			return null; // Return nothing.
 		}
+	}
+	
+	public Player target(UUID target) {
+		if(targetIsOnline(target)) // Check if the target is online
+			return Bukkit.getPlayer(target); // Return target
+		else 
+			return null; // Return nothing.
+	}
+	
+	public static Skills getInstance() {
+		return skills;
 	}
 }

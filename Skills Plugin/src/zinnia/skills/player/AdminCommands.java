@@ -10,7 +10,7 @@ import zinnia.skills.utils.TierUtils;
 
 public class AdminCommands {
 
-	public static void doACmds(CommandSender sender, Skills plugin, String cmd, String[] args) {
+	public static void doConsoleCmds(CommandSender sender, Skills plugin, String cmd, String[] args) {
 		// Reload the config if the command is being used through console.
 		if(args[0].equalsIgnoreCase("reload")) {
 			plugin.reloadConfig();
@@ -18,43 +18,44 @@ public class AdminCommands {
 			plugin.loadConfigData();
 			sender.sendMessage(ChatColor.GREEN + "Config reloaded");
 		}
-
+		
 		/*
 		 * Get skill points
 		 */
 
 		// Get the skill point of a user
-		else if(AdminCommands.getPointCommand(args, "skill", "skillpoint", "skills", "skillsPoint"))
-			AdminCommands.getSkillPoint(sender, plugin, plugin.target(sender, args[1]));
+		else if(args[0].equalsIgnoreCase("get")) {
+			if(AdminCommands.getAdminCommand(args, "skill", "skillpoint", "skills", "skillsPoint", "point", "points"))
+				AdminCommands.getSkillPoint(sender, plugin, plugin.target(sender, args[1]));
 
-		// Get the health point of a user
-		else if(AdminCommands.getPointCommand(args, "health", "hp"))
-			AdminCommands.getHealthPoint(sender, plugin, plugin.target(sender, args[1]));
+			// Get the health point of a user
+			else if(AdminCommands.getAdminCommand(args, "health", "hp"))
+				AdminCommands.getHealthPoint(sender, plugin, plugin.target(sender, args[1]));
 
-		// Get the damage point of a user
-		else if(AdminCommands.getPointCommand(args, "damage", "dmg"))
-			AdminCommands.getDmgPoint(sender, plugin, plugin.target(sender, args[1]));
+			// Get the damage point of a user
+			else if(AdminCommands.getAdminCommand(args,"damage", "dmg"))
+				AdminCommands.getDmgPoint(sender, plugin, plugin.target(sender, args[1]));
 
-		// Get the defense point of the user
-		else if(AdminCommands.getPointCommand(args, "defense"))
-			AdminCommands.getDefensePoint(sender, plugin, plugin.target(sender, args[1]));
+			// Get the defense point of the user
+			else if(AdminCommands.getAdminCommand(args, "defense"))
+				AdminCommands.getDefensePoint(sender, plugin, plugin.target(sender, args[1]));
 		
-		// Get the dodge point of a user
-		else if(AdminCommands.getPointCommand(args, "dodge", "dodgechance"))
-			AdminCommands.getDodgePoint(sender, plugin, plugin.target(sender, args[1]));
+			// Get the dodge point of a user
+			else if(AdminCommands.getAdminCommand(args, "dodge", "dodgechance"))
+				AdminCommands.getDodgePoint(sender, plugin, plugin.target(sender, args[1]));
+		
+			// Get the crit point of a user
+			else if(AdminCommands.getAdminCommand(args,"crit", "critchance", "critical", "criticalchance"))
+				AdminCommands.getCritPoint(sender, plugin, plugin.target(sender, args[1]));
 
-		// Get the crit point of a user
-		else if(AdminCommands.getPointCommand(args, "crit", "critchance", "critical", "criticalchance"))
-			AdminCommands.getCritPoint(sender, plugin, plugin.target(sender, args[1]));
+			// Get the mana point of a user
+			else if(AdminCommands.getAdminCommand(args, "mana"))
+				AdminCommands.getManaPoint(sender, plugin, plugin.target(sender, args[1]));
 
-		// Get the mana point of a user
-		else if(AdminCommands.getPointCommand(args, "mana"))
-			AdminCommands.getManaPoint(sender, plugin, plugin.target(sender, args[1]));
-
-		// Get the crit point of a user
-		else if(AdminCommands.getPointCommand(args, "manaregen", "mana-regen", "regenmana", "regen-mana"))
-			AdminCommands.getManaRegenPoint(sender, plugin, plugin.target(sender, args[1]));
-
+			// Get the crit point of a user
+			else if(AdminCommands.getAdminCommand(args,"manaregen", "mana-regen", "regenmana", "regen-mana"))
+				AdminCommands.getManaRegenPoint(sender, plugin, plugin.target(sender, args[1]));
+		}
 		/*
 		 * Random Misc, I know I'm an idiot...
 		 */
@@ -63,85 +64,99 @@ public class AdminCommands {
 		else if(args[0].equalsIgnoreCase("reset")) 
 			AdminCommands.resetPoints(sender, plugin, plugin.target(sender, args[1]));
 
+		// Give the player temp skill data
+		else if(adminTempCommand(args))
+			AdminCommands.forceTempPoints(sender, plugin, plugin.target(sender, args[1]));
+		
+		// Set the player back to their original skills from the file
+		else if(adminTempLoadCommand(args))
+			forceLoadPoints(sender, plugin, plugin.target(sender, args[1]));
+		
 		/*
 		 * Remove skill points
 		 */
 
-		// Remove skill points from the player
-		else if(AdminCommands.removePointCommand(args, "skill", "skillpoint", "skills", "skillsPoint"))
-			AdminCommands.removeSkillPoints(sender, plugin,  plugin.target(sender, args[1]), args[3]);
+		else if(args[0].equalsIgnoreCase("remove")) {
+			// Remove skill points from the player
+			if(AdminCommands.getAdminCommand(args, "skill", "skillpoint", "skills", "skillsPoint", "point", "points"))
+				AdminCommands.removeSkillPoints(sender, plugin,  plugin.target(sender, args[1]), args[3]);
 
-		// Remove health points from the player
-		else if(AdminCommands.removePointCommand(args, "health", "hp"))
-			AdminCommands.removeHealthPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+			// Remove health points from the player
+			else if(AdminCommands.getAdminCommand(args, "health", "hp"))
+				AdminCommands.removeHealthPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Remove damage points from the player
-		else if(AdminCommands.removePointCommand(args, "dmg", "damage"))
-			AdminCommands.removeDmgPoints(sender, plugin, plugin.target(args[1]), args[3]);
+			// Remove damage points from the player
+			else if(AdminCommands.getAdminCommand(args, "dmg", "damage"))
+				AdminCommands.removeDmgPoints(sender, plugin, plugin.target(args[1]), args[3]);
 
-		// Remove defense points from the player
-		else if(AdminCommands.removePointCommand(args, "defense"))
-			AdminCommands.removeDefensePoints(sender, plugin, plugin.target(args[1]), args[3]);
+			// Remove defense points from the player
+			else if(AdminCommands.getAdminCommand(args, "defense"))
+				AdminCommands.removeDefensePoints(sender, plugin, plugin.target(args[1]), args[3]);
 		
-		// Remove dodge points from the player
-		else if(AdminCommands.removePointCommand(args, "dodge", "dodgechance"))
-			AdminCommands.removeDodgePoints(sender, plugin, 
-					plugin.target(sender, args[1]), args[3]);
+			// Remove dodge points from the player
+			else if(AdminCommands.getAdminCommand(args, "dodge", "dodgechance"))
+				AdminCommands.removeDodgePoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Remove crit points from the player
-		else if(AdminCommands.removePointCommand(args, "crit", "critchance", 
-				"critical", "criticalchance")) 
-			AdminCommands.removeCritPoints(sender, plugin,  
-					plugin.target(sender, args[1]), args[3]);
+			// Remove crit points from the player
+			else if(AdminCommands.getAdminCommand(args,"crit", "critchance", "critical", "criticalchance")) 
+				AdminCommands.removeCritPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Remove mana points from the player
-		else if(AdminCommands.removePointCommand(args, "mana"))
-			AdminCommands.removeManaPoints(sender, plugin, plugin.target(args[1]), args[3]);
+			// Remove mana points from the player
+			else if(AdminCommands.getAdminCommand(args, "mana"))
+				AdminCommands.removeManaPoints(sender, plugin, plugin.target(args[1]), args[3]);
 
-		// Remove mana regen points from the player
-		else if(AdminCommands.removePointCommand(args, "manaregen", "mana-regen", "regenmana", "regen-mana"))
-			AdminCommands.removeMRegenPoints(sender, plugin, plugin.target(args[1]), args[3]);
-
+			// Remove mana regen points from the player
+			else if(AdminCommands.getAdminCommand(args, "manaregen", "mana-regen", "regenmana", "regen-mana"))
+				AdminCommands.removeMRegenPoints(sender, plugin, plugin.target(args[1]), args[3]);
+		}
 		/*
 		 * Give skill points
 		 */
+		else if(args[0].equalsIgnoreCase("give")) {
+			// Give skill points to the player
+			if(AdminCommands.getAdminCommand(args, "skill", "skillpoint", "skills", "skillsPoint", "point", "points"))
+				AdminCommands.giveSkillPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Give skill points to the player
-		else if(AdminCommands.givePointCommand(args, "skill", "skillpoint", "skills", "skillsPoint"))
-			AdminCommands.giveSkillPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+			// Give health points to the player
+			else if(AdminCommands.getAdminCommand(args, "health", "hp"))
+				AdminCommands.giveHealthPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Give health points to the player
-		else if(AdminCommands.givePointCommand(args, "health", "hp"))
-			AdminCommands.giveHealthPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+			// Give damage points to the player
+			else if(AdminCommands.getAdminCommand(args, "damage", "dmg"))
+				AdminCommands.giveDmgPoints(sender, plugin, plugin.target(args[1]), args[3]);
 
-		// Give damage points to the player
-		else if(AdminCommands.givePointCommand(args, "damage", "dmg"))
-			AdminCommands.giveDmgPoints(sender, plugin, plugin.target(args[1]), args[3]);
-
-		// Give defense points to the player
-		else if(AdminCommands.givePointCommand(args, "defense"))
-			AdminCommands.giveDefensePoints(sender, plugin, plugin.target(args[1]), args[3]);
+			// Give defense points to the player
+			else if(AdminCommands.getAdminCommand(args, "defense"))
+				AdminCommands.giveDefensePoints(sender, plugin, plugin.target(args[1]), args[3]);
 		
-		// Give dodge points to the player
-		else if(AdminCommands.givePointCommand(args, "dodge", "dodgechance"))
-			AdminCommands.giveDodgePoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+			// Give dodge points to the player
+			else if(AdminCommands.getAdminCommand(args, "dodge", "dodgechance"))
+				AdminCommands.giveDodgePoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Give crit points to the player
-		else if(AdminCommands.givePointCommand(args, "crit", "critchance", "critical", "criticalchance"))
-			AdminCommands.giveCritPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+			// Give crit points to the player
+			else if(AdminCommands.getAdminCommand(args, "crit", "critchance", "critical", "criticalchance"))
+				AdminCommands.giveCritPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Give mana points to the player
-		else if(AdminCommands.givePointCommand(args, "mana"))
-			AdminCommands.giveManaPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+			// Give mana points to the player
+			else if(AdminCommands.getAdminCommand(args, "mana"))
+				AdminCommands.giveManaPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
 
-		// Give mana regen points to the player
-		else if(AdminCommands.givePointCommand(args, "manaregen", "mana_regen", "regen_mana", "regenmana"))
-			AdminCommands.giveManaRegenPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
-
+			// Give mana regen points to the player
+			else if(AdminCommands.getAdminCommand(args, "manaregen", "mana_regen", "regen_mana", "regenmana"))
+				AdminCommands.giveManaRegenPoints(sender, plugin, plugin.target(sender, args[1]), args[3]);
+		}
+		
 		// Set tier ranks
 		else if(AdminCommands.setTierRank(args))
 			TierUtils.setTierCommand(plugin, sender, plugin.target(sender, args[1]), args[2]);
-
+		
+		// Rank up a player and reset their skills
+		else if (ResetIncreaseTier(args)) {
+			if(sender.hasPermission("skills.tier.resetincrease")) {
+				AdminCommands.tierResetCrease(sender, plugin, plugin.target(sender, args[1]));
+			}
+		}
+		
 		else sender.sendMessage(ChatColor.RED + "Invalid agruments!");
 	}
 
@@ -208,37 +223,97 @@ public class AdminCommands {
 	 * Misc section, I guess yet again I know, I'm an idiot
 	 */
 	public static void resetPoints(CommandSender sender, Skills plugin, Player target) {
-		PlayerCommands.sendSkillPoint(plugin, target); // Send their previous amount of skill points
-		PlayerCommands.sendHealthPoint(plugin, target); // Send their previous amount of health points
-		PlayerCommands.sendDmgPoint(plugin, target); // Send their previous amount of damage points
-		PlayerCommands.sendDefensePoint(plugin, target); // Send their previous amount of defense oints
-		PlayerCommands.sendDodgePoint(plugin, target); // Send their previous amount of dodge points
-		PlayerCommands.sendCritPoint(plugin, target); // Send their previous amount of critical points
-		PlayerCommands.sendManaPoint(plugin, target); // Send their previous amount of mana points
-		PlayerCommands.sendManaRegenPoint(plugin, target); // Send their previous amount of mana regen points
-
-		plugin.playerSkills.get(target.getUniqueId()).points = 0; // Set skill points to zero
-		plugin.playerSkills.get(target.getUniqueId()).lastLevel = 0; // Set the last level to zero
-		plugin.playerSkills.get(target.getUniqueId()).healthPoints = 0; // Set health points to zero
-		plugin.playerSkills.get(target.getUniqueId()).dmgPoints = 0; // Set damage points to zero
-		plugin.playerSkills.get(target.getUniqueId()).defensePoints = 0; // Set the defense points to zero
-		plugin.playerSkills.get(target.getUniqueId()).dodgePoints = 0; // Set dodge points to zero
-		plugin.playerSkills.get(target.getUniqueId()).critPoints = 0; // Set critical points to zero
-		plugin.playerSkills.get(target.getUniqueId()).manaPoints = 0; // Set mana points to zero
-		plugin.playerSkills.get(target.getUniqueId()).manaRegenPoints = 0; // Set mana regen points to zero
-		plugin.playerSkills.get(target.getUniqueId()).increaseHealth(target); // Change the health
-		plugin.playerSkills.get(target.getUniqueId()).setMaxMana(target); // Set the max mana
-		plugin.playerSkills.get(target.getUniqueId()).setManaRegen(target); // Set the mana regen
-		target.setLevel(0); // Set the level to zero
+		resetData(plugin, target);
 
 		plugin.savePointsFile(target.getUniqueId()); // Save the file
 		target.sendMessage(Colours.RED + "An admin has reset your skill points and level!"); // Send a message
 	}
 
+	public static void resetPoints(Skills plugin, Player player) {
+		resetData(plugin, player);
+		
+		player.setLevel(0); // Set the level to zero
+
+		player.sendMessage(ChatColor.GREEN + "Your skills have been reset!");
+		plugin.savePointsFile(player.getUniqueId()); // Save the file
+	}
+	
+	public static void resetPointsForTier(Skills plugin, Player target) {
+		resetData(plugin, target);
+
+		target.sendMessage(ChatColor.GREEN + "Your skills have been reset and you increased in tier!");
+		plugin.savePointsFile(target.getUniqueId()); // Save the file
+	}
+	
+	public static void resetData(Skills plugin, Player player) {
+		PlayerCommands.sendSkillPoint(plugin, player); // Send their previous amount of skill points
+		PlayerCommands.sendHealthPoint(plugin, player); // Send their previous amount of health points
+		PlayerCommands.sendDmgPoint(plugin, player); // Send their previous amount of damage points
+		PlayerCommands.sendDefensePoint(plugin, player); // Send their previous amount of defense points
+		PlayerCommands.sendDodgePoint(plugin, player); // Send their previous amount of dodge points
+		PlayerCommands.sendCritPoint(plugin, player); // Send their previous amount of critical points
+		PlayerCommands.sendManaPoint(plugin, player); // Send their previous amount of mana points
+		PlayerCommands.sendManaRegenPoint(plugin, player); // Send their previous amount of mana regen points
+		
+		plugin.playerSkills.get(player.getUniqueId()).points = 0; // Set skill points to zero
+		plugin.playerSkills.get(player.getUniqueId()).lastLevel = 0; // Set the last level to zero
+		plugin.playerSkills.get(player.getUniqueId()).healthPoints = 0; // Set health points to zero
+		plugin.playerSkills.get(player.getUniqueId()).dmgPoints = 0; // Set damage points to zero
+		plugin.playerSkills.get(player.getUniqueId()).defensePoints = 0; // Set the defense points to zero
+		plugin.playerSkills.get(player.getUniqueId()).dodgePoints = 0; // Set dodge points to zero
+		plugin.playerSkills.get(player.getUniqueId()).critPoints = 0; // Set critical points to zero
+		plugin.playerSkills.get(player.getUniqueId()).manaPoints = 0; // Set mana points to zero
+		plugin.playerSkills.get(player.getUniqueId()).manaRegenPoints = 0; // Set mana regen points to zero
+		plugin.playerSkills.get(player.getUniqueId()).increaseHealth(player); // Change the health
+		plugin.playerSkills.get(player.getUniqueId()).setMaxMana(player); // Set the max mana
+		plugin.playerSkills.get(player.getUniqueId()).setManaRegen(player); // Set the mana regen
+		
+		player.setLevel(0); // Set the level to zero
+	}
+	
+	public static void tierResetCrease(CommandSender sender, Skills plugin, Player target) {
+		if(Menu.checkAllStatMaxOut(plugin, target.getUniqueId())) {
+			resetPoints(sender, plugin, target);
+			TierUtils.increaseTierOnLevel(plugin, target);
+		} else sender.sendMessage("That player hasn't maxed thier skills yet!");
+	}
+	
+	
+	// Force a player to use temp skill points
+	public static void forceTempPoints(CommandSender sender, Skills plugin, Player target) {
+		plugin.playerSkills.get(target.getUniqueId()).healthPoints = Skills.tempxHpPoints;
+		plugin.playerSkills.get(target.getUniqueId()).dmgPoints = Skills.tempDmgPoints;
+		plugin.playerSkills.get(target.getUniqueId()).defensePoints = Skills.tempDefensePoints;
+		plugin.playerSkills.get(target.getUniqueId()).dodgePoints = Skills.tempDodgePoints;
+		plugin.playerSkills.get(target.getUniqueId()).critPoints = Skills.tempCritPoints;
+		plugin.playerSkills.get(target.getUniqueId()).manaPoints = Skills.tempManaPoints;
+		plugin.playerSkills.get(target.getUniqueId()).manaRegenPoints = Skills.tempManaRegenPoints;
+		
+		plugin.playerSkills.get(target.getUniqueId()).increaseHealth(target);
+		plugin.playerSkills.get(target.getUniqueId()).setMaxMana(target);
+		plugin.playerSkills.get(target.getUniqueId()).setManaRegen(target);
+		
+		plugin.playerSkills.get(target.getUniqueId()).usingTempPoints = true;
+		
+		target.sendMessage(ChatColor.GREEN + "An admin has given you temp points!");
+		sender.sendMessage(ChatColor.GREEN + "You've given " + ChatColor.GOLD + target.getName() + ChatColor.GREEN + " temp points!");
+	}
+	
+	public static void forceLoadPoints(CommandSender sender, Skills plugin, Player target) {
+		plugin.loadPointsFile(target.getUniqueId());
+		plugin.playerSkills.get(target.getUniqueId()).increaseHealth(target);
+		plugin.playerSkills.get(target.getUniqueId()).setMaxMana(target);
+		plugin.playerSkills.get(target.getUniqueId()).setManaRegen(target);
+		
+		plugin.playerSkills.get(target.getUniqueId()).usingTempPoints = false;
+		
+		target.sendMessage(ChatColor.GREEN + "An admin has set you to your normal points!");
+		sender.sendMessage(ChatColor.GREEN + "You've have " + ChatColor.GOLD + target.getName() + ChatColor.GREEN + " to their normal points points!");
+	}
+	
 	/*
 	 * Remove points section
 	 */
-
 	public static void removeSkillPoints(CommandSender sender, Skills plugin, Player target, String amount) {
 		try { // Try to do stuff because parsing...
 			int removeAmount = Integer.parseInt(amount); // Parse the amount string
@@ -583,30 +658,32 @@ public class AdminCommands {
 	}
 
 	// Basic command typed to get an amount of points a player has
-	public static boolean getPointCommand(String[] args, String... pointType) {
+	public static boolean getAdminCommand(String[] args, String... pointType) {
 		for(String type : pointType) {
-			return(args[0].equals("get") && args[2].equalsIgnoreCase(type))?true:false;
+			if(args[2].equalsIgnoreCase(type))return true;
 		}
 		return false;
 	}
-
-	// Basic command typed to remove points from a player
-	public static boolean removePointCommand(String[] args, String... pointType) {
-		for(String type : pointType) {
-			return(args[0].equals("remove") && args[2].equalsIgnoreCase(type))?true:false;
-		}
-		return false;
-	}
-
-	// Basic command to give points to a player
-	public static boolean givePointCommand(String[] args, String... pointType) {
-		for(String type : pointType) {
-			return(args[0].equalsIgnoreCase("give") && args[2].equalsIgnoreCase(type))?true:false;
-		}
-		return false;
-	}
-
+	
 	public static boolean setTierRank(String[] args) {
 		return(args[0].equalsIgnoreCase("settier") || args[0].equalsIgnoreCase("set_tier"))?true:false;
+	}
+	
+	public static boolean ResetIncreaseTier(String[] args) {
+		return(args[0].equalsIgnoreCase("reset_increase"))?true:false;
+	}
+	
+	public static boolean adminTempCommand(String[] args) {
+		if(args[0].equalsIgnoreCase("temp") || args[0].equalsIgnoreCase("temporary")) {
+			if(args.length == 1) return true;
+		}
+		return false;
+	}
+	
+	public static boolean adminTempLoadCommand(String[] args) {
+		if(args[0].equalsIgnoreCase("load") || args[0].equalsIgnoreCase("loadfromfile")) {
+			if(args.length == 1) return true;
+		}
+		return false;
 	}
 }

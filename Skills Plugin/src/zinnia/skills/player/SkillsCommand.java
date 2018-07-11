@@ -22,9 +22,9 @@ public class SkillsCommand {
 				if(sender instanceof Player) { // Check if the sender is an instance of player
 					PlayerCommands.doPCmd(sender, plugin, menu, cmd, args);
 				} else {
-					AdminCommands.doACmds(sender, plugin, cmd, args);
+					AdminCommands.doConsoleCmds(sender, plugin, cmd, args);
 				}
 			} // Catch an exception and return a message saying "invalid arguments!" to the sender.
-		} catch(Exception e) { sender.sendMessage(Colours.RED + "Invalid arguments!"); /*e.printStackTrace();*/ }
+		} catch(Exception e) { sender.sendMessage(Colours.RED + "Invalid arguments!"); e.printStackTrace(); }
 	}
 }

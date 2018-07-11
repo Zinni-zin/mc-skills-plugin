@@ -1,6 +1,6 @@
 name: Skills
 main: zinnia.skills.main.Skills
-version: 1.6
+version: 2.0
 author: Zinnia James
 commands:
   Skills:

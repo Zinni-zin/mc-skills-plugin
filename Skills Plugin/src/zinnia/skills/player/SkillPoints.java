@@ -1,5 +1,7 @@
 package zinnia.skills.player;
 
+import java.text.DecimalFormat;
+
 import org.bukkit.entity.Player;
 
 import com.nisovin.magicspells.MagicSpells;
@@ -8,6 +10,10 @@ import zinnia.skills.main.Skills;
 
 public class SkillPoints {
 
+	static DecimalFormat hpFormat = new DecimalFormat("#.##");
+	
+	public int tierLevel;
+	
 	public int points; // Earned points that haven't been spent
 	public int lastLevel; // Their latest level
 
@@ -21,6 +27,8 @@ public class SkillPoints {
 	public int manaPoints; // Points put into mana
 	public int manaRegenPoints; // Points put into mana regen
 
+	public boolean usingTempPoints; // A boolean used to determine if the player is using temp points or not
+	
 	// Does health calculations to set the health and stuff
 	@SuppressWarnings("deprecation")
 	public void increaseHealth(Player player) {
@@ -35,15 +43,19 @@ public class SkillPoints {
 			player.setHealthScaled(true);
 		}
 	}
-
+	
 	// Sets the max mana
 	public void setMaxMana(Player player) {
-		MagicSpells.getManaHandler().setMaxMana(player, defaultMaxMana(player) + getManaIncrase());
+		MagicSpells.getManaHandler().setMaxMana(player, defaultMaxMana(player) + getMana());
 	}
 
 	// Sets the mana regen amount
 	public void setManaRegen(Player player) {
 		MagicSpells.getManaHandler().setRegenAmount(player, defaultManaRegen(player) + getManaRegen());
+	}
+	
+	public double getHealth(Player player) {
+		return healthPoints * Skills.maxHp / Skills.maxHpPoints;
 	}
 
 	// Get the damage to add on to the default damage of whatever damage is being dealt
@@ -87,7 +99,7 @@ public class SkillPoints {
 	}
 
 	// Gets the mana increase
-	public int getManaIncrase() {
+	public int getMana() {
 		try {
 			return manaPoints * Skills.maxMana / Skills.maxManaPoints;
 		} catch(Exception e) { 

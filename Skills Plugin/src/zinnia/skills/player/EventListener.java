@@ -12,6 +12,7 @@ import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLevelChangeEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.permissions.PermissionAttachment;
 
 import com.earth2me.essentials.api.Economy;
@@ -29,6 +30,11 @@ public class EventListener implements Listener {
 
 	@EventHandler
 	public void onPlayerJoin(PlayerJoinEvent e) {
+		try { // Try to attach permissions as a player joins
+			PermissionAttachment attachment = e.getPlayer().addAttachment(plugin);
+			plugin.tierPerms.put(e.getPlayer().getUniqueId(), attachment);
+		} catch(Exception ex) { }
+		
 		onJoinData(e.getPlayer().getUniqueId()); // Set the join data
 
 		if(Skills.useMaxHpSkill) plugin.playerSkills.get(e.getPlayer().getUniqueId()).increaseHealth(e.getPlayer()); // Set the max health
@@ -37,11 +43,6 @@ public class EventListener implements Listener {
 
 		// Set the player's level based off of their last level
 		if(plugin.saveLevel) e.getPlayer().setLevel(plugin.playerSkills.get(e.getPlayer().getUniqueId()).lastLevel);
-
-		try { // Try to attach permissions as a player joins
-			PermissionAttachment attachment = e.getPlayer().addAttachment(plugin);
-			plugin.tierPerms.put(e.getPlayer().getUniqueId(), attachment);
-		} catch(Exception ex) { }
 	}
 
 	@EventHandler
@@ -49,12 +50,13 @@ public class EventListener implements Listener {
 		if(e.getNewLevel() > plugin.playerSkills.get(e.getPlayer().getUniqueId()).lastLevel){
 			// Check if the level moves up so we don't give points for deleveling
 			if(e.getNewLevel() > e.getOldLevel()) {
-				int pointIncrease = pointIncrease(); // Get the point increase,
+				for(int i = 0; i < e.getNewLevel() - e.getOldLevel(); i++) { // Make sure we get points for each level so they don't miss out on points
+					int pointIncrease = pointIncrease(); // Get the point increase,
+					plugin.playerSkills.get(e.getPlayer().getUniqueId()).lastLevel = e.getNewLevel(); // Update their newest level
 
-				plugin.playerSkills.get(e.getPlayer().getUniqueId()).lastLevel = e.getNewLevel(); // Update their newest level
-
-				// Increase the points
-				plugin.playerSkills.get(e.getPlayer().getUniqueId()).points += pointIncrease;
+					// Increase the points
+					plugin.playerSkills.get(e.getPlayer().getUniqueId()).points += pointIncrease;
+				}
 				plugin.savePointsFile(e.getPlayer().getUniqueId()); // Save the file
 			}
 		} 
@@ -72,47 +74,51 @@ public class EventListener implements Listener {
 	public void onEntityDamageByEntity(EntityDamageByEntityEvent e) {
 		if(e.getEntity() instanceof Player) { // Check if the entity getting damaged is a player
 			if(plugin.playerSkills.get(e.getEntity().getUniqueId()).Dodge()) { // Check if they dodged
-				e.getEntity().sendMessage(ChatColor.GREEN + "You evaded the attack!"); // Send a message to them telling them they dodged
+				if(Skills._SendDodgeMessage)
+					e.getEntity().sendMessage(ChatColor.GREEN + "You evaded the attack!"); // Send a message to them telling them they dodged
 
 				if(e.getDamager() instanceof Player) // Check if the damager is a player
-					e.getDamager().sendMessage( // Send them a message saying their foe evaded their attack
-							ChatColor.RED + e.getEntity().getCustomName() + " evaded your attack!");
-
+				{
+					if(Skills._SendDodgeMessage)
+						e.getDamager().sendMessage( // Send them a message saying their foe evaded their attack
+								ChatColor.RED + e.getEntity().getName() + " evaded your attack!");
+				}
 				e.setCancelled(true); // Cancel the event
+				return;
 			}
 		}
-
+		
 		// Check if the damager is a player
 		if(e.getDamager() instanceof Player) { 
-
+			Player damager = (Player)e.getDamager();
 			double damage = 2.5; // Default damage
-
+			
 			// Get the damage amount from the game's default damage and add the skill's damage on it and take away the defense from the enemy
 			if(e.getEntity() instanceof Player) {
-				damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg() -
-						plugin.playerSkills.get(e.getEntity().getUniqueId()).getDefense();
+				damage = e.getDamage() + plugin.playerSkills.get(damager.getUniqueId()).getDmg() - plugin.playerSkills.get(e.getEntity().getUniqueId()).getDefense();
 			}
 			else {
-				damage = e.getDamage() + plugin.playerSkills.get(e.getDamager().getUniqueId()).getDmg() - mobDefense(e.getEntity().getType());
+				damage = e.getDamage() + plugin.playerSkills.get(damager.getUniqueId()).getDmg() - mobDefense(e.getEntity().getType());
 			}
 
 			// Make sure damage doesn't go to zero or less than zero
-			if(damage <= 0) damage = 2.5;
+			if(damage <= 0) damage = e.getDamage() + 2.5;
 
 			// Check if they crit or not
 			if(plugin.playerSkills.get(e.getDamager().getUniqueId()).Crit()) {
-				e.getEntity().sendMessage(ChatColor.GREEN + "You got a critical hit!"); // Send a message saying they crit
+				if(Skills._SendCritMessage)
+					e.getEntity().sendMessage(ChatColor.GREEN + "You got a critical hit!"); // Send a message saying they crit
 
 				if(e.getEntity() instanceof Player) // Send the foe a message saying they got hit with a crit
-					e.getEntity().sendMessage(ChatColor.RED + e.getDamager().getCustomName() + " Got a critical hit on you!");
+					if(Skills._SendCritMessage)
+						e.getEntity().sendMessage(ChatColor.RED + e.getDamager().getName() + " Got a critical hit on you!");
 
 				e.setDamage(damage * 2); // Multiply the attack damage by two
 			}
 
-			e.getDamager().sendMessage(ChatColor.RED + "Damage dealt is " + ChatColor.BLUE + damage);
 			e.setDamage(damage); // Set the default damage to our damage variable
 		}
-		
+		// Mobs
 		if(e.getDamager() instanceof Monster) {
 			double damage = 2.5;
 			
@@ -129,6 +135,13 @@ public class EventListener implements Listener {
 		}
 	}
 
+	// This event is used to make sure the mana regen and everything stays after they've died
+	@EventHandler
+	public void onPlayerRespawn(PlayerRespawnEvent e) {
+		plugin.playerSkills.get(e.getPlayer().getUniqueId()).setMaxMana(e.getPlayer());
+		plugin.playerSkills.get(e.getPlayer().getUniqueId()).setManaRegen(e.getPlayer());
+	}
+	
 	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void onEnchant(EnchantItemEvent e) {
@@ -148,6 +161,7 @@ public class EventListener implements Listener {
 	private void onJoinData(UUID playerUUID) {
 		if(!plugin.playerSkills.containsKey(playerUUID)) {  
 			plugin.playerSkills.put(playerUUID, new SkillPoints());
+			plugin.playerSkills.get(playerUUID).tierLevel = 0;
 			plugin.playerSkills.get(playerUUID).points = 0;
 			plugin.playerSkills.get(playerUUID).lastLevel = 0;
 			plugin.playerSkills.get(playerUUID).healthPoints = 0;
@@ -159,6 +173,7 @@ public class EventListener implements Listener {
 		}
 		else {
 			plugin.playerSkills.get(playerUUID).points = 0;
+			plugin.playerSkills.get(playerUUID).tierLevel = 0;
 			plugin.playerSkills.get(playerUUID).lastLevel = 0;
 			plugin.playerSkills.get(playerUUID).healthPoints = 0;
 			plugin.playerSkills.get(playerUUID).dmgPoints = 0;
@@ -170,6 +185,7 @@ public class EventListener implements Listener {
 		}
 	}
 
+	
 	// Method to get mob damage
 	private double mobDamage(EntityType entity) {
 		try {
@@ -199,7 +215,7 @@ public class EventListener implements Listener {
 	private double mobDefense(EntityType entity) {
 		try {
 			if(entity == EntityType.OCELOT)                                               return Skills.ocelotDefense;
-			if(entity == EntityType.HORSE || entity == EntityType.SKELETON_HORSE)         return Skills.horseDefense;
+			if(entity == EntityType.HORSE)        										  return Skills.horseDefense;
 			if(entity == EntityType.RABBIT)                                               return Skills.rabbitDefense;
 			if(entity == EntityType.SHEEP)                                                return Skills.sheepDefense;
 			if(entity == EntityType.PIG)                                                  return Skills.pigDefense;
@@ -230,6 +246,7 @@ public class EventListener implements Listener {
 			if(entity == EntityType.GUARDIAN)                                             return Skills.guardianDamage;
 			if(entity == EntityType.ELDER_GUARDIAN)                                       return Skills.elderGuardianDamage;
 			if(entity == EntityType.POLAR_BEAR)                                           return Skills.polarBearDamage;
+			if(entity == EntityType.SKELETON_HORSE)                                       return Skills.horseDefense;
 			if(entity == EntityType.SHULKER)                                              return Skills.shulkerDefense;
 			if(entity == EntityType.LLAMA)                                                return Skills.llamaDefense;
 			if(entity == EntityType.ENDERMITE)                                            return Skills.endermiteDefense;

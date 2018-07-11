@@ -8,16 +8,6 @@ import org.bukkit.entity.Player;
 
 import zinnia.skills.utils.ScoreboardData;
 
-/*
- * This class was made by Zinnia
- * This is done using reflection so if you don't understand don't edit!
- * The smallest mistake can throw an error so only edit if you can read the code and write your own reflection
- * The scoreboard does have a little bit of flicker but it's ight
- * If this is untouched and throws an error, it's most likely due to packet class names changing 
- * or essentials on a server reload but that can be ignored.
- * Reflection is only used to handle the package imports so it should be compatible with most version of spigot or bukkit
- * Unless of course any class names were changed as mentioned before
- */
 public class SkillsScoreboard {
 
 	//Skills plugin; // Variable to hold the plugin's main class
